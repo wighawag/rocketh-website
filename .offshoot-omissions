@@ -55,3 +55,8 @@
 # "This repo omits nothing" is allowed to stand only when that command says so.
 # The last file in this tree to assert it without running anything was wrong by
 # seventeen paths, and a cascade had already paid for it.
+
+# The home page is the content's own `index.md`, rendered by the catch-all
+# route `web/src/routes/[...path]/`. A static `+page.svelte` at `/` would take
+# precedence over it and hide the content's home page.
+web/src/routes/+page.svelte

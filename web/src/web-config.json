@@ -1,7 +1,7 @@
 {
-	"name": "Template Website",
-	"title": "Template Website",
-	"description": "A template to build website",
+	"name": "Docs Template",
+	"title": "Docs Template",
+	"description": "A documentation site built from a folder of Markdown",
 	"canonicalURL": "https://localhost",
 	"ENSName": null,
 	"themeColor": "#000000",

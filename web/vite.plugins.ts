@@ -1,11 +1,13 @@
 import type {PluginOption} from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+import {docs} from './docs-engine/vite-plugin.js';
 
 /**
  * The vite plugins THIS project adds to the template's.
  *
- * This variant adds Tailwind, and that is the whole of what it adds. It used to
- * be an import and a line in `vite.config.ts`, which made that file differ from
+ * This variant adds Tailwind (from `template-svelte-tailwind`) and the docs
+ * engine (`docs()`, see `docs-engine/vite-plugin.ts`). Tailwind used to be an
+ * import and a line in `vite.config.ts`, which made that file differ from
  * the stem's forever to say one thing; now `vite.config.ts` here is BYTE
  * IDENTICAL to `template-svelte`'s and this is the only file that differs.
  *
@@ -57,9 +59,10 @@ import tailwindcss from '@tailwindcss/vite';
  * whether this is a test run - those belong to the plugin that cares.
  */
 export function extraPlugins(): PluginOption[] {
-	// Before `sveltekit()`, which is what the spread's position in
+	// `docs()` is `enforce: 'pre'`, so its place in this list does not matter
+	// to Vite. Both come before `sveltekit()`, which is what the spread's position in
 	// `vite.config.ts` guarantees and what Tailwind's own SvelteKit
 	// instructions require. If that ever needs to change, it changes there,
 	// for everyone, rather than here.
-	return [tailwindcss()];
+	return [docs(), tailwindcss()];
 }

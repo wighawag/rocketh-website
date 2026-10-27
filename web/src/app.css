@@ -132,6 +132,15 @@
 	}
 }
 
+/* The page background, all the way down. The generated `app.html` (pwag,
+   from web-config.json) gives <html> fixed colours of its own; the theme has
+   to win over them, or a short page shows them below its end. Unlayered on
+   purpose, so it beats those utility classes. */
+html {
+	background-color: var(--background);
+	color: var(--foreground);
+}
+
 /* @tailwindcss/typography 0.5.20 (with Tailwind v4) drops the standard
    max-width/height rule for .prose img, so inline markdown images render
    at their natural width and escape the .prose container.
@@ -139,4 +148,246 @@
 .prose img {
 	max-width: 100%;
 	height: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   DOCS. Everything a rendered Markdown page needs. The page body is HTML from
+   the docs engine (docs-engine/), so it is styled here by class rather than
+   with utilities in markup. Colours come from the theme tokens above, so a
+   descendant that repaints the tokens repaints the docs too.
+   ------------------------------------------------------------------------ */
+
+/* Typography: @tailwindcss/typography's `prose`, with its palette pointed at
+   the theme tokens. The SAME tokens serve both modes (they change under
+   `.dark`), so `prose-invert` is not used: its own grey ramp is what made body
+   text too dim on a dark background. */
+.docs-prose {
+	--tw-prose-body: color-mix(
+		in oklab,
+		var(--foreground) 90%,
+		var(--background)
+	);
+	--tw-prose-headings: var(--foreground);
+	--tw-prose-lead: var(--muted-foreground);
+	--tw-prose-links: var(--foreground);
+	--tw-prose-bold: var(--foreground);
+	--tw-prose-counters: var(--muted-foreground);
+	--tw-prose-bullets: var(--muted-foreground);
+	--tw-prose-hr: var(--border);
+	--tw-prose-quotes: var(--foreground);
+	--tw-prose-quote-borders: var(--border);
+	--tw-prose-captions: var(--muted-foreground);
+	--tw-prose-kbd: var(--foreground);
+	--tw-prose-code: var(--foreground);
+	--tw-prose-th-borders: var(--border);
+	--tw-prose-td-borders: var(--border);
+}
+.docs-prose :where(h1, h2, h3, h4, h5, h6) {
+	scroll-margin-top: 5rem;
+}
+.docs-prose :where(a):not(:where(.not-prose *, [data-embed] *)) {
+	text-underline-offset: 3px;
+	text-decoration-color: color-mix(
+		in oklab,
+		var(--foreground) 40%,
+		transparent
+	);
+}
+.docs-prose :where(a):not(:where(.not-prose *)):hover {
+	text-decoration-color: var(--foreground);
+}
+
+/* Block quotes: quoted text, not a pull quote. Typography's italics and
+   curly quotation marks turn a plain `>` note into something else. */
+.docs-prose :where(blockquote):not(:where(.not-prose *)) {
+	font-style: normal;
+	font-weight: inherit;
+	color: var(--muted-foreground);
+}
+.docs-prose :where(blockquote p):not(:where(.not-prose *))::before,
+.docs-prose :where(blockquote p):not(:where(.not-prose *))::after {
+	content: none;
+}
+
+/* Inline code: a chip, WITHOUT the backticks typography adds by default. */
+.docs-prose :where(code):not(:where(pre *, .not-prose *))::before,
+.docs-prose :where(code):not(:where(pre *, .not-prose *))::after {
+	content: none;
+}
+.docs-prose :where(code):not(:where(pre *, .not-prose *)) {
+	padding: 0.15em 0.4em;
+	border-radius: calc(var(--radius) - 4px);
+	background: var(--muted);
+	font-size: 0.875em;
+	font-weight: 500;
+}
+
+/* Code blocks: Shiki writes both themes into the markup; pick by mode. */
+.docs-content .code-block {
+	position: relative;
+	margin: 1.25rem 0;
+}
+.docs-content pre.shiki {
+	margin: 0;
+	padding: 1rem 1.25rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background-color: var(--card) !important;
+	font-size: 0.875rem;
+	line-height: 1.7;
+	overflow-x: auto;
+}
+.dark .docs-content pre.shiki {
+	background-color: oklch(0.18 0 0) !important;
+}
+.dark .shiki,
+.dark .shiki span {
+	color: var(--shiki-dark) !important;
+	font-style: var(--shiki-dark-font-style) !important;
+	font-weight: var(--shiki-dark-font-weight) !important;
+	text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+.docs-content .code-lang,
+.docs-content .code-copy {
+	position: absolute;
+	top: 0.5rem;
+	z-index: 1;
+	font-size: 0.75rem;
+	line-height: 1;
+	color: var(--muted-foreground);
+}
+.docs-content .code-lang {
+	right: 0.85rem;
+	pointer-events: none;
+	padding: 0.35rem 0;
+	transition: opacity 150ms;
+}
+.docs-content .code-copy {
+	right: 0.5rem;
+	padding: 0.35rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) - 4px);
+	background: var(--background);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 150ms;
+}
+.docs-content .code-block:hover .code-copy,
+.docs-content .code-copy:focus-visible,
+.docs-content .code-copy[data-copied] {
+	opacity: 1;
+}
+.docs-content .code-block:hover .code-lang {
+	opacity: 0;
+}
+@media (hover: none) {
+	.docs-content .code-copy {
+		opacity: 1;
+	}
+	.docs-content .code-lang {
+		display: none;
+	}
+}
+
+/* Code groups: the tab strip of shadcn's Tabs, over the panels. */
+.docs-content .code-group {
+	margin: 1.25rem 0;
+}
+.docs-content .code-group-tabs {
+	display: inline-flex;
+	gap: 0.25rem;
+	margin-bottom: 0.5rem;
+	padding: 0.2rem;
+	border-radius: var(--radius);
+	background: var(--muted);
+}
+.docs-content .code-group-tabs button {
+	padding: 0.25rem 0.75rem;
+	border-radius: calc(var(--radius) - 2px);
+	font-size: 0.8125rem;
+	font-weight: 500;
+	color: var(--muted-foreground);
+	cursor: pointer;
+}
+.docs-content .code-group-tabs button[aria-selected='true'] {
+	background: var(--background);
+	color: var(--foreground);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.docs-content .code-group .code-block {
+	margin: 0;
+}
+/* The tab already names the block. */
+.docs-content .code-group .code-lang {
+	display: none;
+}
+
+/* Callouts: `:::tip`, `:::warning [Title]`, `> [!NOTE]`, `:::details`. */
+.docs-content .callout {
+	--callout: var(--muted-foreground);
+	margin: 1.25rem 0;
+	padding: 0.75rem 1rem;
+	border: 1px solid color-mix(in oklab, var(--callout) 35%, var(--border));
+	border-left-width: 4px;
+	border-left-color: var(--callout);
+	border-radius: var(--radius);
+	background: color-mix(in oklab, var(--callout) 8%, var(--background));
+}
+.docs-content .callout > :first-child {
+	margin-top: 0;
+}
+.docs-content .callout > :last-child {
+	margin-bottom: 0;
+}
+.docs-content .callout :where(p) {
+	margin: 0.5em 0;
+}
+.docs-content .callout-title {
+	margin: 0 0 0.25rem;
+	font-weight: 600;
+	color: var(--foreground);
+}
+.docs-content .callout-tip {
+	--callout: oklch(0.62 0.15 150);
+}
+.docs-content .callout-info,
+.docs-content .callout-note {
+	--callout: oklch(0.6 0.15 245);
+}
+.docs-content .callout-important {
+	--callout: oklch(0.58 0.2 295);
+}
+.docs-content .callout-warning {
+	--callout: oklch(0.75 0.16 75);
+}
+.docs-content .callout-danger,
+.docs-content .callout-caution {
+	--callout: var(--destructive);
+}
+.docs-content details.callout > summary {
+	margin: 0;
+	cursor: pointer;
+}
+.docs-content details.callout[open] > summary {
+	margin-bottom: 0.5rem;
+}
+.docs-content .unknown-directive {
+	margin: 1.25rem 0;
+	padding: 0.5rem 1rem;
+	border: 1px dashed var(--destructive);
+	border-radius: var(--radius);
+}
+
+/* Tables scroll on their own instead of widening the page. */
+.docs-content table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+/* Search excerpts: Pagefind marks the matched words. */
+.search-excerpt mark {
+	background: color-mix(in oklab, var(--foreground) 15%, transparent);
+	color: var(--foreground);
+	border-radius: 2px;
 }

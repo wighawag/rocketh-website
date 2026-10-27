@@ -18,8 +18,10 @@ import {
 	getHashParamsFromLocation,
 	getParamsFromLocation,
 } from './core/utils/web/url';
-import {createRouteHandler, resolvePath} from './kit/paths';
+import {createRouteHandler, resolvePath, url} from './kit/paths';
 import {openFromNotification} from './kit/notification-navigation';
+import {manifest, loaders} from 'virtual:docs';
+import {createSearch} from './core/docs/search';
 
 /**
  * The notifications service is generic: a notification is just a title/body/
@@ -57,6 +59,21 @@ export const {route, isSameRoute, isParentRoute, params} = createRouteHandler(
 		// {pattern: /^(\/post\/)([^/]+)\/?$/, basePath: '/post/'}
 		dynamicRoutes: [],
 	},
+);
+
+/**
+ * The docs: the manifest (every page's metadata, the sections and their
+ * sidebars) and a loader per page, both generated from the content folder by
+ * the docs engine (docs-engine/vite-plugin.ts).
+ */
+export const docs = {manifest, loaders};
+
+/**
+ * Site search. `pagefind.js` is resolved against the document, because a
+ * relative URL handed to `import()` would resolve against THIS module instead.
+ */
+export const search = createSearch(
+	() => new URL(url('/pagefind/pagefind.js'), document.baseURI).href,
 );
 
 console.log(`VERSION: ${version}`);
