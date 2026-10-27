@@ -161,6 +161,46 @@ describe('DocsSite', () => {
 		}
 	});
 
+	it('forwards old addresses, and lets content link to them', async () => {
+		write({'guide/old-link.md': '# Old link\n\n[old](/guide/setup/)'});
+		try {
+			const s = await site({
+				redirects: {
+					'/guide/setup': '/guide/install#setup',
+					'/old-home/': 'https://example.com/elsewhere',
+				},
+			});
+			expect(s.check()).toEqual([]);
+			expect(s.manifest().redirects).toEqual({
+				'/guide/setup/': '/guide/install/#setup',
+				'/old-home/': 'https://example.com/elsewhere',
+			});
+		} finally {
+			rmSync(join(root, 'guide/old-link.md'));
+		}
+	});
+
+	it('reports a redirect that does not land, or hides a page', async () => {
+		const s = await site({
+			redirects: {
+				'/guide/': '/api/',
+				'/a/': '/nowhere/',
+				'/b/': '/a/',
+				'/c/': '/guide/install/#nope',
+				'/d/': 'ftp://example.com/',
+				'e/': '/api/',
+			},
+		});
+		expect(s.check().map((p) => p.message)).toEqual([
+			'redirect `/d/`: an external target must be an http(s) URL, not `ftp://example.com/`',
+			'redirect `e/`: an old address must be a site path starting with `/`, without a query or an anchor',
+			'redirect `/guide/`: is also a page; a page and a forwarding page cannot share an address',
+			'redirect `/a/`: its target `/nowhere/` is not a page of the site',
+			'redirect `/b/`: its target `/a/` is itself a redirect; point it at the final page',
+			'redirect `/c/`: its target `/guide/install/#nope` has no id "nope"',
+		]);
+	});
+
 	it('resolves frontmatter links to site paths', async () => {
 		const s = await site({base: '/docs/'});
 		const code = s.moduleCode(join(root, 'index.md'))!;

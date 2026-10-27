@@ -46,6 +46,12 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  * @property {{light: string, dark: string}} [codeThemes] Shiki themes.
  * @property {string} [navFile] Name of the per-section file that replaces the
  *   generated sidebar. Defaults to `_sidebar.yaml`.
+ * @property {Record<string, string>} [redirects] Old addresses that must keep
+ *   working: `{'/old/path/': '/new/path/'}`. Each key is a SITE path (from the
+ *   site root, whatever `base` is) and gets a forwarding page in the build.
+ *   Each value is a site path of a page (an `#anchor` may follow), or an
+ *   absolute `https://` URL. A key that is also a page, or a value that is
+ *   not one, fails the build like a dead link.
  */
 
 /**
@@ -71,6 +77,7 @@ export const DEFAULTS = Object.freeze({
 	editLink: null,
 	codeThemes: {light: 'github-light', dark: 'github-dark'},
 	navFile: '_sidebar.yaml',
+	redirects: {},
 });
 
 const here = dirname(fileURLToPath(import.meta.url));

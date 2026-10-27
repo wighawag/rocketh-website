@@ -43,6 +43,7 @@ Everything about the content is in `web/docs.config.js`. Every field is optional
 | `editLink`   | none              | `{repo, branch, dir, text}`: "edit this page" links to `<repo>/edit/<branch>/<dir>/<file>`.               |
 | `codeThemes` | GitHub light/dark | The two Shiki themes.                                                                                      |
 | `navFile`    | `_sidebar.yaml`   | The file name of a section's explicit sidebar.                                                             |
+| `redirects`  | none              | Old addresses that keep working: `{'/old/path/': '/new/path/'}`. See [Redirects](#redirects).             |
 
 The site's name, description and canonical URL (used by the feed and the social cards) are in `web/src/web-config.json`.
 
@@ -106,6 +107,22 @@ HTML in a page is rendered as written. That is how a custom element gets into a 
 - **Sidebar**: each section's sidebar is generated from its folder. The section's `index.md` comes first. A page is an entry; a sub-folder with an `index.md` is an entry whose children are the pages inside it; a sub-folder without one is a group labelled from its name. Entries are sorted by `order`, then by title.
 - **Nav file**: a section that wants explicit control puts a `_sidebar.yaml` in its folder. It has VitePress's sidebar shape (`text`, `link`, `items`, `collapsed`), and a `link` may be site-absolute, relative to the section folder, or a Markdown file name. A link that resolves to nothing fails the build.
 - **Previous/next** follow the sidebar's reading order. The **breadcrumb** follows the sidebar's groups. The **table of contents** lists the h2 and h3 headings and highlights the one being read. The **edit link** comes from `editLink`. Unknown addresses get a **404 page** (the static host serves `404.html`, see `web/static/_redirects`).
+
+## Redirects
+
+When a page moves, its old address keeps working through `redirects` in `web/docs.config.js`:
+
+```js
+redirects: {
+	'/guide/start/': '/guide/getting-started/',
+	'/guide/old-faq/': '/guide/faq/#troubleshooting',
+	'/introduction/': 'https://github.com/owner/repo#readme',
+},
+```
+
+- A key is the old address, as a site path from the site root (whatever `base` is). A value is the page it moved to, as a site path with an optional `#anchor`, or an absolute `http(s)` URL.
+- Each key gets a forwarding page in the build, so it works on any static host, with no server rules: an inline script sends the reader on (keeping the `#anchor` they arrived with, unless the target names one), a meta refresh does the same without JavaScript, and the page links to the target and names it as `rel=canonical`. It is marked `noindex` and left out of search. Under `vite dev` the same page is served.
+- The table is checked like a link: a key that is also a page, a target that is not a page, a target that is itself a redirect, and an `#anchor` the target does not have all fail the build. A link in the content to an old address is not dead, since it still works.
 
 ## Articles
 

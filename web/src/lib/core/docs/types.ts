@@ -109,6 +109,11 @@ export type DocsManifest = {
 		pattern: string;
 		text: string;
 	} | null;
+	/**
+	 * Old site paths, each forwarded to a new one: a site path (possibly with
+	 * an `#anchor`) or an absolute URL. Keys are in `/x/` shape.
+	 */
+	redirects: Record<string, string>;
 };
 
 /** Loads a page's module by its route. */

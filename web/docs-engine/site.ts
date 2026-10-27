@@ -7,7 +7,7 @@
  */
 import {existsSync, globSync, readFileSync, statSync} from 'node:fs';
 import {join, posix, relative, sep} from 'node:path';
-import type {ResolvedDocsConfig} from './config.js';
+import {normaliseBase, type ResolvedDocsConfig} from './config.js';
 import type {
 	DocModule,
 	DocsManifest,
@@ -73,6 +73,9 @@ export class DocsSite {
 	private extraRoutes = new Set<string>();
 	private sources = new Map<string, string>();
 	private routeSet = new Set<string>();
+	/** Old site path -> where it forwards to, both normalised. */
+	private redirectMap = new Map<string, string>();
+	private redirectProblems: string[] = [];
 	problems: Problem[] = [];
 	private cachedManifest: DocsManifest | null = null;
 
@@ -167,7 +170,13 @@ export class DocsSite {
 			// The feed is a site route, outside the content's mount point.
 			this.extraRoutes.add('/feed.xml');
 		}
-		this.routeSet = new Set([...this.sources.values(), ...this.extraRoutes]);
+		this.loadRedirects();
+		this.routeSet = new Set([
+			...this.sources.values(),
+			...this.extraRoutes,
+			// An old address still works, so content linking to it is not dead.
+			...this.redirectMap.keys(),
+		]);
 
 		const next = new Map<string, Entry>();
 		for (const [source, route] of this.sources) {
@@ -175,6 +184,95 @@ export class DocsSite {
 		}
 		this.entries = next;
 		this.cachedManifest = null;
+	}
+
+	/**
+	 * Normalise `redirects` from the config: keys to `/x/` shape, internal
+	 * targets to a route plus an optional `#anchor`. Whether each target lands
+	 * is decided by `check()`, once every page is known.
+	 */
+	private loadRedirects(): void {
+		this.redirectMap = new Map();
+		this.redirectProblems = [];
+		for (const [from, to] of Object.entries(this.config.redirects ?? {})) {
+			if (!from.startsWith('/') || /[?#]/.test(from)) {
+				this.redirectProblems.push(
+					`redirect \`${from}\`: an old address must be a site path starting with \`/\`, without a query or an anchor`,
+				);
+				continue;
+			}
+			const key = normaliseBase(from);
+			if (typeof to !== 'string' || !to.trim()) {
+				this.redirectProblems.push(`redirect \`${from}\`: no target`);
+				continue;
+			}
+			const target = to.trim();
+			if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('//')) {
+				if (!/^https?:\/\//i.test(target)) {
+					this.redirectProblems.push(
+						`redirect \`${from}\`: an external target must be an http(s) URL, not \`${target}\``,
+					);
+					continue;
+				}
+				this.redirectMap.set(key, target);
+				continue;
+			}
+			if (!target.startsWith('/')) {
+				this.redirectProblems.push(
+					`redirect \`${from}\`: the target \`${target}\` must be a site path starting with \`/\`, or an http(s) URL`,
+				);
+				continue;
+			}
+			const h = target.indexOf('#');
+			const path = h === -1 ? target : target.slice(0, h);
+			const hash = h === -1 ? '' : target.slice(h);
+			// A file route (`/feed.xml`) keeps its shape; a page gets its slash.
+			const last = path.split('/').at(-1) ?? '';
+			const route = last.includes('.') ? path : normaliseBase(path);
+			this.redirectMap.set(key, route + hash);
+		}
+	}
+
+	/** Problems with the redirects: a target that is not a page, and so on. */
+	private checkRedirects(idsByRoute: Map<string, Set<string>>): Problem[] {
+		const source = this.config.configFile.split(/[\\/]/).at(-1) ?? 'config';
+		const problems: Problem[] = this.redirectProblems.map((message) => ({
+			source,
+			line: null,
+			message,
+		}));
+		const pageRoutes = new Set([...this.sources.values(), ...this.extraRoutes]);
+		for (const [from, to] of this.redirectMap) {
+			const report = (message: string) =>
+				problems.push({
+					source,
+					line: null,
+					message: `redirect \`${from}\`: ${message}`,
+				});
+			if (pageRoutes.has(from)) {
+				report(
+					'is also a page; a page and a forwarding page cannot share an address',
+				);
+				continue;
+			}
+			if (/^[a-z][a-z0-9+.-]*:/i.test(to)) continue;
+			const h = to.indexOf('#');
+			const route = h === -1 ? to : to.slice(0, h);
+			if (this.redirectMap.has(route)) {
+				report(
+					`its target \`${to}\` is itself a redirect; point it at the final page`,
+				);
+			} else if (!pageRoutes.has(route)) {
+				report(`its target \`${to}\` is not a page of the site`);
+			} else if (h !== -1) {
+				const ids = idsByRoute.get(route);
+				const id = decodeURIComponent(to.slice(h + 1));
+				if (ids && !ids.has(id)) {
+					report(`its target \`${to}\` has no id "${id}"`);
+				}
+			}
+		}
+		return problems;
 	}
 
 	/**
@@ -414,6 +512,7 @@ export class DocsSite {
 						text: editLink.text ?? 'Edit this page on GitHub',
 					}
 				: null,
+			redirects: Object.fromEntries(this.redirectMap),
 		};
 		return this.cachedManifest;
 	}
@@ -449,6 +548,7 @@ export class DocsSite {
 		for (const entry of this.entries.values()) {
 			idsByRoute.set(entry.route, new Set(entry.result.ids));
 		}
+		problems.push(...this.checkRedirects(idsByRoute));
 		for (const entry of this.entries.values()) {
 			for (const warning of entry.result.warnings) {
 				problems.push({source: entry.source, line: null, message: warning});
