@@ -114,7 +114,12 @@ export type DocsManifest = {
 	 * an `#anchor`) or an absolute URL. Keys are in `/x/` shape.
 	 */
 	redirects: Record<string, string>;
+	/** Links at the right of the header (`socialLinks` in the config). */
+	socialLinks: SocialLink[];
 };
+
+/** A link in the header to somewhere else: the repository, a chat. */
+export type SocialLink = {link: string; icon: string | null; label: string};
 
 /** Loads a page's module by its route. */
 export type PageLoaders = Record<string, () => Promise<{default: DocModule}>>;
