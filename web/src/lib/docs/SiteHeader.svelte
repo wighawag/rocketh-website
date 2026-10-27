@@ -9,6 +9,8 @@
 	import {cn} from '$lib/shadcn/utils';
 	import Sidebar from './Sidebar.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
+	import SocialIcon from './SocialIcon.svelte';
+	import {hasSocialIcon as hasIcon} from './social';
 
 	interface Props {
 		manifest: DocsManifest;
@@ -102,6 +104,23 @@
 				<span class="hidden sm:inline">Search...</span>
 				<Kbd class="ml-auto hidden sm:inline-flex">Ctrl K</Kbd>
 			</Button>
+			{#each manifest.socialLinks as social (social.link)}
+				<Button
+					variant="ghost"
+					size={hasIcon(social.icon) ? 'icon' : 'default'}
+					href={social.link}
+					target="_blank"
+					rel="noreferrer"
+					aria-label={social.label}
+					data-testid="social-link"
+				>
+					{#if hasIcon(social.icon)}
+						<SocialIcon name={social.icon!} />
+					{:else}
+						{social.label}
+					{/if}
+				</Button>
+			{/each}
 			<ThemeToggle />
 		</div>
 	</div>

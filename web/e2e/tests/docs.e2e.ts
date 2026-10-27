@@ -161,6 +161,17 @@ test('opens the menu on a small screen', async ({browser}) => {
 	await context.close();
 });
 
+test('links to the repository from the header', async ({page}) => {
+	await page.goto(url('/guide/'));
+	const link = page.getByTestId('social-link');
+	await expect(link).toHaveAttribute(
+		'href',
+		'https://github.com/wighawag/template-svelte-docs',
+	);
+	await expect(link).toHaveAccessibleName('github');
+	await expect(page).toHaveTitle('Introduction | Docs Template');
+});
+
 test('forwards an old address to its new page', async ({page}) => {
 	// `redirects` in docs.config.js: the old address is a static file that
 	// sends the reader on, keeping the anchor they asked for.

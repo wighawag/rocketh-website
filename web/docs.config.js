@@ -39,6 +39,11 @@ export default {
 		'/guide/start/': '/guide/getting-started/',
 	},
 
+	// Links at the right of the header.
+	socialLinks: [
+		{icon: 'github', link: 'https://github.com/wighawag/template-svelte-docs'},
+	],
+
 	// "Edit this page on GitHub".
 	editLink: {
 		repo: 'https://github.com/wighawag/template-svelte-docs',

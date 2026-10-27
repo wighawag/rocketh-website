@@ -14,10 +14,13 @@
 
 	// Under `vite dev`, an edited page is swapped in place (core/docs/live.ts).
 	let doc = $derived(data.doc ? latest(data.doc, $pageUpdates) : null);
+	// The site's home page is titled by the site alone. Any other page, a
+	// section's landing page with `layout: home` included, by its own title
+	// first, so its tab and its social card say which page it is.
 	let title = $derived(
 		data.redirect
 			? `Moved | ${name}`
-			: data.meta?.layout === 'home' || !doc
+			: !doc || data.route === docs.manifest.base
 				? name
 				: `${doc.title} | ${name}`,
 	);

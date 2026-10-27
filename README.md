@@ -43,6 +43,7 @@ Everything about the content is in `web/docs.config.js`. Every field is optional
 | `editLink`   | none              | `{repo, branch, dir, text}`: "edit this page" links to `<repo>/edit/<branch>/<dir>/<file>`.               |
 | `codeThemes` | GitHub light/dark | The two Shiki themes.                                                                                      |
 | `navFile`    | `_sidebar.yaml`   | The file name of a section's explicit sidebar.                                                             |
+| `socialLinks` | none             | Links at the right of the header: `[{icon: 'github', link, label}]`. `github` is drawn; others show `label`. |
 | `redirects`  | none              | Old addresses that keep working: `{'/old/path/': '/new/path/'}`. See [Redirects](#redirects).             |
 
 The site's name, description and canonical URL (used by the feed and the social cards) are in `web/src/web-config.json`.
@@ -96,7 +97,7 @@ A page is a Markdown file; its path is its address. `guide/install.md` is `/guid
 | `hero`         | `layout: home`: `name`, `text`, `tagline`, `image` (`src`, or `light` and `dark`, plus `alt`), `actions` (`theme: brand` or `alt`, `text`, `link`). |
 | `features`     | `layout: home`: cards with `title`, `details`, and optional `icon` and `link`.                                       |
 
-The home page fields follow VitePress's `layout: home` shape, so a VitePress home page carries over as it is. Any page can be a home page: a section's `index.md` with `layout: home` makes a landing page for that section.
+The home page fields follow VitePress's `layout: home` shape, so a VitePress home page carries over as it is. Any page can be a home page: a section's `index.md` with `layout: home` makes a landing page for that section. The site's own home page is titled with the site name alone; any other page, a section's landing page included, is titled `<page> | <site>`, in its tab and on its social card.
 
 ### Raw HTML, and why it is allowed
 
@@ -106,6 +107,7 @@ HTML in a page is rendered as written. That is how a custom element gets into a 
 
 - **Sidebar**: each section's sidebar is generated from its folder. The section's `index.md` comes first. A page is an entry; a sub-folder with an `index.md` is an entry whose children are the pages inside it; a sub-folder without one is a group labelled from its name. Entries are sorted by `order`, then by title.
 - **Nav file**: a section that wants explicit control puts a `_sidebar.yaml` in its folder. It has VitePress's sidebar shape (`text`, `link`, `items`, `collapsed`), and a `link` may be site-absolute, relative to the section folder, or a Markdown file name. A link that resolves to nothing fails the build.
+- **Header**: the site's name (from `web/src/web-config.json`), the sections, search, the `socialLinks`, and the theme toggle.
 - **Previous/next** follow the sidebar's reading order. The **breadcrumb** follows the sidebar's groups. The **table of contents** lists the h2 and h3 headings and highlights the one being read. The **edit link** comes from `editLink`. Unknown addresses get a **404 page** (the static host serves `404.html`, see `web/static/_redirects`).
 
 ## Redirects

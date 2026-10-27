@@ -513,6 +513,11 @@ export class DocsSite {
 					}
 				: null,
 			redirects: Object.fromEntries(this.redirectMap),
+			socialLinks: (this.config.socialLinks ?? []).map((l) => ({
+				link: l.link,
+				icon: l.icon ?? null,
+				label: l.label ?? l.icon ?? l.link,
+			})),
 		};
 		return this.cachedManifest;
 	}
@@ -549,6 +554,15 @@ export class DocsSite {
 			idsByRoute.set(entry.route, new Set(entry.result.ids));
 		}
 		problems.push(...this.checkRedirects(idsByRoute));
+		for (const l of this.config.socialLinks ?? []) {
+			if (typeof l?.link !== 'string' || !/^https?:\/\//i.test(l.link)) {
+				problems.push({
+					source: this.config.configFile.split(/[\\/]/).at(-1) ?? 'config',
+					line: null,
+					message: `socialLinks: \`${l?.link}\` is not an http(s) URL`,
+				});
+			}
+		}
 		for (const entry of this.entries.values()) {
 			for (const warning of entry.result.warnings) {
 				problems.push({source: entry.source, line: null, message: warning});

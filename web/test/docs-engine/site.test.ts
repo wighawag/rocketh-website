@@ -201,6 +201,23 @@ describe('DocsSite', () => {
 		]);
 	});
 
+	it('lists the social links, and reports one that is not a URL', async () => {
+		const s = await site({
+			socialLinks: [
+				{icon: 'github', link: 'https://github.com/o/r'},
+				{label: 'Chat', link: 'https://chat.example.com'},
+				{icon: 'github', link: '/relative/'},
+			],
+		});
+		expect(s.manifest().socialLinks.slice(0, 2)).toEqual([
+			{icon: 'github', label: 'github', link: 'https://github.com/o/r'},
+			{icon: null, label: 'Chat', link: 'https://chat.example.com'},
+		]);
+		expect(s.check().map((p) => p.message)).toEqual([
+			'socialLinks: `/relative/` is not an http(s) URL',
+		]);
+	});
+
 	it('resolves frontmatter links to site paths', async () => {
 		const s = await site({base: '/docs/'});
 		const code = s.moduleCode(join(root, 'index.md'))!;

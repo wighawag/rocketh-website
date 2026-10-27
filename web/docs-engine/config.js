@@ -26,6 +26,15 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  */
 
 /**
+ * @typedef {object} SocialLinkConfig
+ * @property {string} link Where it goes, an absolute URL.
+ * @property {string} [icon] A known icon: `github`. Without one (or with an
+ *   unknown one), the header shows `label` as text.
+ * @property {string} [label] Accessible name, and the text shown when there
+ *   is no icon. Defaults to the icon's name.
+ */
+
+/**
  * @typedef {object} DocsConfig
  * @property {string} [contentDir] The Markdown folder, relative to the config
  *   file. It may live anywhere: `../docs`, a sibling package, the root of
@@ -46,6 +55,8 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  * @property {{light: string, dark: string}} [codeThemes] Shiki themes.
  * @property {string} [navFile] Name of the per-section file that replaces the
  *   generated sidebar. Defaults to `_sidebar.yaml`.
+ * @property {SocialLinkConfig[]} [socialLinks] Links at the right of the
+ *   header, VitePress style: `[{icon: 'github', link: 'https://github.com/o/r'}]`.
  * @property {Record<string, string>} [redirects] Old addresses that must keep
  *   working: `{'/old/path/': '/new/path/'}`. Each key is a SITE path (from the
  *   site root, whatever `base` is) and gets a forwarding page in the build.
@@ -78,6 +89,7 @@ export const DEFAULTS = Object.freeze({
 	codeThemes: {light: 'github-light', dark: 'github-dark'},
 	navFile: '_sidebar.yaml',
 	redirects: {},
+	socialLinks: [],
 });
 
 const here = dirname(fileURLToPath(import.meta.url));
