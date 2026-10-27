@@ -193,12 +193,91 @@ describe('DocsSite', () => {
 		});
 		expect(s.check().map((p) => p.message)).toEqual([
 			'redirect `/d/`: an external target must be an http(s) URL, not `ftp://example.com/`',
-			'redirect `e/`: an old address must be a site path starting with `/`, without a query or an anchor',
+			'redirect `e/`: an old address must be a site path starting with `/`, without a query',
 			'redirect `/guide/`: is also a page; a page and a forwarding page cannot share an address',
 			'redirect `/a/`: its target `/nowhere/` is not a page of the site',
 			'redirect `/b/`: its target `/a/` is itself a redirect; point it at the final page',
 			'redirect `/c/`: its target `/guide/install/#nope` has no id "nope"',
 		]);
+	});
+
+	it('reads redirects from the content, next to the config ones', async () => {
+		write({
+			'_redirects.yaml':
+				"/guide/old-install/: /guide/install/\n'/guide/old-install/#setup': /api/get/\n",
+		});
+		try {
+			const s = await site({redirects: {'/old-home/': '/guide/'}});
+			expect(s.check()).toEqual([]);
+			expect(s.manifest().redirects).toEqual({
+				'/old-home/': '/guide/',
+				'/guide/old-install/': '/guide/install/',
+			});
+			expect(s.manifest().redirectAnchors).toEqual({
+				'/guide/old-install/': {setup: '/api/get/'},
+			});
+			expect(s.isWatched(join(root, '_redirects.yaml'))).toBe(true);
+			// `redirectsFile: null` turns the file off.
+			expect((await site({redirectsFile: null})).manifest().redirects).toEqual(
+				{},
+			);
+		} finally {
+			rmSync(join(root, '_redirects.yaml'));
+		}
+	});
+
+	it('reports a content redirect that does not land, by its file', async () => {
+		write({
+			'_redirects.yaml': [
+				'/guide/twice/: /guide/',
+				"'/guide/twice/#a': /guide/install/#nope",
+				"'/guide/install/#setup': /guide/",
+				"'/guide/twice/#': /guide/",
+				'',
+			].join('\n'),
+		});
+		try {
+			const s = await site({redirects: {'/guide/twice/': '/api/'}});
+			expect(s.check()).toEqual([
+				{
+					source: '_redirects.yaml',
+					line: null,
+					message:
+						'redirect `/guide/twice/`: is listed twice (in docs.config.js and _redirects.yaml)',
+				},
+				{
+					source: '_redirects.yaml',
+					line: null,
+					message:
+						'redirect `/guide/install/#setup`: `/guide/install/` is not a redirect; an anchor can only be forwarded from an old address that is one',
+				},
+				{
+					source: '_redirects.yaml',
+					line: null,
+					message:
+						'redirect `/guide/twice/#`: an anchor key needs an id after `#`',
+				},
+				{
+					source: '_redirects.yaml',
+					line: null,
+					message:
+						'redirect `/guide/twice/#a`: its target `/guide/install/#nope` has no id "nope"',
+				},
+			]);
+		} finally {
+			rmSync(join(root, '_redirects.yaml'));
+		}
+	});
+
+	it('reports a redirects file that is not a map', async () => {
+		write({'_redirects.yaml': '- /a/\n- /b/\n'});
+		try {
+			expect((await site()).check().map((p) => p.message)).toEqual([
+				'the redirects must be a map of old address to new address',
+			]);
+		} finally {
+			rmSync(join(root, '_redirects.yaml'));
+		}
 	});
 
 	it('lists the social links, and reports one that is not a URL', async () => {

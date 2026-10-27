@@ -114,6 +114,11 @@ export type DocsManifest = {
 	 * an `#anchor`) or an absolute URL. Keys are in `/x/` shape.
 	 */
 	redirects: Record<string, string>;
+	/**
+	 * Anchors of an old site path (a key of `redirects`) that forward
+	 * somewhere other than its own target: old path -> anchor id -> target.
+	 */
+	redirectAnchors: Record<string, Record<string, string>>;
 	/** Links at the right of the header (`socialLinks` in the config). */
 	socialLinks: SocialLink[];
 };
