@@ -2,7 +2,7 @@
 //
 // Plain JavaScript with JSDoc types, on purpose: it is read by THREE kinds of
 // caller (`vite.config.ts` through the Vite plugin, `svelte.config.js` for the
-// prerender error handler, and `scripts/docs-postbuild.js` after the build),
+// prerender error handler, and `docs-engine/postbuild.js` after the build),
 // and only the first of those can import TypeScript.
 
 import {existsSync} from 'node:fs';

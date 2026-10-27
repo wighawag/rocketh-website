@@ -41,7 +41,7 @@
 			{/if}
 			{#if hero.actions?.length}
 				<div class="mt-8 flex flex-wrap justify-center gap-3 md:justify-start">
-					{#each hero.actions as action (action.text)}
+					{#each hero.actions as action, i (i)}
 						<Button
 							href={href(action.link)}
 							variant={action.theme === 'alt' ? 'outline' : 'default'}
@@ -79,7 +79,7 @@
 			class="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
 			data-testid="features"
 		>
-			{#each features as feature (feature.title)}
+			{#each features as feature, i (i)}
 				<Card.Root class="gap-2">
 					<Card.Header>
 						{#if feature.icon}<div class="mb-2 text-2xl">

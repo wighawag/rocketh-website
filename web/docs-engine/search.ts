@@ -1,7 +1,7 @@
 /**
  * Pagefind, both ways.
  *
- * BUILD: `scripts/docs-postbuild.js` indexes the prerendered HTML in `build/`,
+ * BUILD: `docs-engine/postbuild.js` indexes the prerendered HTML in `build/`,
  * the way Pagefind is meant to be used: what is searched is exactly what was
  * published, and `data-pagefind-body` (on the article element of a page)
  * keeps the header, sidebar and footer out of the results.

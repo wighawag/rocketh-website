@@ -421,7 +421,7 @@ export class DocsSite {
 			readFileSync(navFile, 'utf8'),
 			(link) => {
 				const target = resolveLink(link, ctx);
-				return target.kind === 'page' ? target.route : null;
+				return target.kind === 'page' ? target.route + target.hash : null;
 			},
 			errors,
 		);

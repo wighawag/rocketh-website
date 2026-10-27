@@ -31,8 +31,10 @@ export function renderFeed(options: {
 	const host = options.host.replace(/\/$/, '');
 	// The newest article's date rather than the build time: a static site
 	// published to IPFS would otherwise change hash on every rebuild.
-	const lastBuildDate = utc(options.items[0]?.date ?? null);
+	const lastBuildDate = utc(options.items.find((i) => i.date)?.date ?? null);
+	// An article without a `date` has no place in a dated feed.
 	const items = options.items
+		.filter((item) => item.date)
 		.map((item) => {
 			const link = `${host}${item.route}`;
 			return `<item>

@@ -54,6 +54,16 @@ describe('renderMarkdown', () => {
 		expect(compact.html).toContain('<p>After</p>');
 	});
 
+	it('handles containers nested in containers', async () => {
+		const r = await render(
+			'::: details Outer\n\n> [!NOTE]\n> Inner note\n\n:::\n\n::: foo\nsee note:here\n:::',
+		);
+		expect(r.html).toContain('callout-details');
+		expect(r.html).toContain('callout-note');
+		expect(r.html).toContain('<p>Inner note</p>');
+		expect(r.html).toContain('see note:here');
+	});
+
 	it('renders GitHub alerts as callouts', async () => {
 		const r = await render('> [!WARNING]\n> Careful');
 		expect(r.html).toContain('callout-warning');

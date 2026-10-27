@@ -109,7 +109,7 @@ HTML in a page is rendered as written. That is how a custom element gets into a 
 
 ## Articles
 
-With `articles: 'articles'`, every page in `docs/articles/` with a `date` is an article: it has its own layout, it is listed newest first at `/articles/` (under that folder's `index.md`, if it has one), and it is in the RSS feed at `/feed.xml`. Absolute URLs in the feed come from `canonicalURL` in `web/src/web-config.json`.
+With `articles: 'articles'`, every page in `docs/articles/` other than its `index.md` is an article: it has its own layout and is listed newest first by its `date` frontmatter at `/articles/` (under that folder's `index.md`, if it has one). Articles with a `date` are also in the RSS feed at `/feed.xml`; give every article one. Absolute URLs in the feed come from `canonicalURL` in `web/src/web-config.json`.
 
 ## Embeds
 

@@ -101,6 +101,9 @@ export function createSearch(
 				s.query === query ? {query, status: 'ready', results, error: null} : s,
 			);
 		} catch (error) {
+			let current = true;
+			state.update((s) => ((current = s.query === query), s));
+			if (!current) return; // a newer query owns the state now
 			state.set({
 				query,
 				status: 'error',

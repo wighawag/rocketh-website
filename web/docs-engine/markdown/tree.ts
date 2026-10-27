@@ -31,7 +31,7 @@ export function walk(
 	// A visitor may REPLACE the node at its index (the replacement is then
 	// walked), but must not insert or remove siblings.
 	for (let i = 0; i < children.length; i++) {
-		walk(children[i], visit, node, i);
+		walk(children[i], visit, current, i);
 	}
 }
 

@@ -102,7 +102,7 @@ export function containers(tree: AnyNode): void {
 
 /**
  * `::component{name=Counter start=3}` becomes a placeholder the site mounts a
- * Svelte component into (see `src/lib/core/docs/embeds.ts`). The container
+ * Svelte component into (see `src/lib/core/docs/enhance.ts`). The container
  * form `:::component{name=X}` keeps its Markdown body as the content shown
  * before (or without) JavaScript.
  */
