@@ -16,7 +16,11 @@ import type {
 	Section,
 } from '../src/lib/core/docs/types.js';
 import {flattenLinks} from '../src/lib/core/docs/navigation.js';
-import {renderMarkdown, type RenderResult} from './markdown/render.js';
+import {
+	renderMarkdown,
+	splitFrontmatter,
+	type RenderResult,
+} from './markdown/render.js';
 import {resolveLink} from './markdown/links.js';
 import {generateSidebar, humanise, readNavFile} from './sidebar.js';
 
@@ -31,7 +35,6 @@ type Entry = {
 	text: string;
 	result: RenderResult;
 	meta: PageMeta;
-	draft: boolean;
 };
 
 const LAYOUTS: Layout[] = ['doc', 'home', 'page', 'article'];
@@ -142,6 +145,10 @@ export class DocsSite {
 		this.sources.clear();
 		const routes = new Map<string, string>();
 		for (const source of this.scan()) {
+			// Drafts are left out of a build BEFORE anything is rendered, so a
+			// link to one is a dead link like any other, reported with its file
+			// and line rather than discovered by the prerender crawl.
+			if (this.mode === 'build' && this.isDraft(source)) continue;
 			const route = posix.join(this.config.base, routePathOf(source), '/');
 			const existing = routes.get(route);
 			if (existing) {
@@ -157,6 +164,7 @@ export class DocsSite {
 			this.extraRoutes.add(
 				posix.join(this.config.base, this.config.articles, '/'),
 			);
+			// The feed is a site route, outside the content's mount point.
 			this.extraRoutes.add('/feed.xml');
 		}
 		this.routeSet = new Set([...this.sources.values(), ...this.extraRoutes]);
@@ -166,18 +174,20 @@ export class DocsSite {
 			next.set(source, await this.renderEntry(source, route));
 		}
 		this.entries = next;
-		this.drafts();
 		this.cachedManifest = null;
 	}
 
-	/** Drafts are pages in dev and absent from a build. */
-	private drafts(): void {
-		if (this.mode !== 'build') return;
-		for (const [source, entry] of this.entries) {
-			if (entry.draft) {
-				this.entries.delete(source);
-				this.routeSet.delete(entry.route);
-			}
+	/**
+	 * Whether a page is a draft (`draft: true`): shown by the dev server,
+	 * absent from a build. Unreadable frontmatter is not a draft; rendering
+	 * the page reports the error.
+	 */
+	private isDraft(source: string): boolean {
+		try {
+			const text = readFileSync(join(this.config.contentRoot, source), 'utf8');
+			return splitFrontmatter(text).data.draft === true;
+		} catch {
+			return false;
 		}
 	}
 
@@ -245,7 +255,7 @@ export class DocsSite {
 			toc: fm.toc !== false,
 			editLink: fm.editLink !== false,
 		};
-		return {source, file, route, text, result, meta, draft: fm.draft === true};
+		return {source, file, route, text, result, meta};
 	}
 
 	/**

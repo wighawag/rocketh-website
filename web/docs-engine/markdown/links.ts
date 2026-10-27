@@ -99,6 +99,18 @@ export function resolveLink(href: string, ctx: LinkContext): LinkTarget {
 	if (bare && ctx.isRoute(fileRoute)) {
 		return {kind: 'page', route: fileRoute, hash, query};
 	}
+	// A route of the SITE rather than of the content, such as `/feed.xml`,
+	// which stays at the site root when the content is mounted under a base.
+	if (bare && ctx.base !== '/') {
+		for (const siteRoute of [
+			posix.join('/', bare, '/'),
+			posix.join('/', bare),
+		]) {
+			if (ctx.isRoute(siteRoute)) {
+				return {kind: 'page', route: siteRoute, hash, query};
+			}
+		}
+	}
 
 	if (bare && ctx.isPublicFile(safeDecode(bare))) {
 		return {kind: 'asset', sitePath: posix.join(ctx.base, bare), hash, query};
