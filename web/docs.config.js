@@ -31,6 +31,14 @@ export default {
 	// Dated pages with a list and a feed (`/feed.xml`).
 	articles: 'articles',
 
+	// Old addresses that must keep working, each forwarded to where its page
+	// lives now. A key is a site path; a value is a site path or an https URL.
+	// A forwarding page is written for each, and a target that is not a page
+	// fails the build.
+	redirects: {
+		'/guide/start/': '/guide/getting-started/',
+	},
+
 	// "Edit this page on GitHub".
 	editLink: {
 		repo: 'https://github.com/wighawag/template-svelte-docs',

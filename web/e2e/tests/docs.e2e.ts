@@ -161,6 +161,14 @@ test('opens the menu on a small screen', async ({browser}) => {
 	await context.close();
 });
 
+test('forwards an old address to its new page', async ({page}) => {
+	// `redirects` in docs.config.js: the old address is a static file that
+	// sends the reader on, keeping the anchor they asked for.
+	await page.goto(url('/guide/start/#install'));
+	await expect(page).toHaveURL(url('/guide/getting-started/#install'));
+	await expect(page.locator('h1')).toHaveText('Getting started');
+});
+
 test('shows a 404 page for an unknown address', async ({page}) => {
 	// What a static host serves for an unknown path (see `_redirects`): the
 	// SPA fallback, which routes the address it is loaded at.

@@ -14,5 +14,6 @@
 | `editLink`   | none               | `{repo, branch, dir, text}` for the "edit this page" link.                |
 | `codeThemes` | GitHub light/dark  | The two Shiki themes.                                                     |
 | `navFile`    | `_sidebar.yaml`    | The file name of a section's explicit sidebar.                            |
+| `redirects`  | none               | `{'/old/path/': '/new/path/'}`: old addresses forwarded to their new page. |
 
 Set `DOCS_CONFIG=path/to/other.config.js` to build with another config file without editing this one.

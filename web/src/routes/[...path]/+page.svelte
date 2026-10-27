@@ -4,6 +4,7 @@
 	import HomePage from '$lib/docs/HomePage.svelte';
 	import ArticlePage from '$lib/docs/ArticlePage.svelte';
 	import ArticlesPage from '$lib/docs/ArticlesPage.svelte';
+	import RedirectPage from '$lib/docs/RedirectPage.svelte';
 	import {latest, pageUpdates} from '$lib/core/docs/live';
 	import {docs, route} from '$lib';
 	import {url} from '$lib/kit/paths';
@@ -14,7 +15,11 @@
 	// Under `vite dev`, an edited page is swapped in place (core/docs/live.ts).
 	let doc = $derived(data.doc ? latest(data.doc, $pageUpdates) : null);
 	let title = $derived(
-		data.meta?.layout === 'home' || !doc ? name : `${doc.title} | ${name}`,
+		data.redirect
+			? `Moved | ${name}`
+			: data.meta?.layout === 'home' || !doc
+				? name
+				: `${doc.title} | ${name}`,
 	);
 </script>
 
@@ -28,7 +33,12 @@
 	home={data.route === docs.manifest.base}
 />
 
-{#if data.isArticleList}
+{#if data.redirect}
+	<RedirectPage
+		href={route(data.redirect)}
+		canonical={new URL(data.redirect, canonicalURL).href}
+	/>
+{:else if data.isArticleList}
 	<ArticlesPage
 		manifest={docs.manifest}
 		{doc}
