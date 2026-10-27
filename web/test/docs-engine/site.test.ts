@@ -136,6 +136,31 @@ describe('DocsSite', () => {
 		}
 	});
 
+	it('treats a link to a draft as dead in a build, and fine in dev', async () => {
+		write({'guide/to-draft.md': '# To draft\n\n[draft](draft.md)'});
+		try {
+			expect((await site()).check().map((p) => p.message)).toContain(
+				'dead link `draft.md`: no such Markdown page',
+			);
+			expect((await site({}, 'dev')).check()).toEqual([]);
+		} finally {
+			rmSync(join(root, 'guide/to-draft.md'));
+		}
+	});
+
+	it('resolves the feed, a site route, under a base path', async () => {
+		write({'guide/feed.md': '# Feed\n\n[rss](/feed.xml)'});
+		try {
+			const s = await site({base: '/docs/'});
+			expect(s.check()).toEqual([]);
+			expect(
+				s.entryForFile(join(root, 'guide/feed.md'))!.result.html,
+			).toContain('href="../../../feed.xml"');
+		} finally {
+			rmSync(join(root, 'guide/feed.md'));
+		}
+	});
+
 	it('resolves frontmatter links to site paths', async () => {
 		const s = await site({base: '/docs/'});
 		const code = s.moduleCode(join(root, 'index.md'))!;
