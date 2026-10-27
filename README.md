@@ -41,11 +41,11 @@ From `web/`: `pnpm check`, `pnpm test`, `pnpm format:check`, and `pnpm test:e2e`
 
 | Where                                | What                                                                                                                                                       |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `web/docs.config.js`                 | Where the rocketh checkout is (`ROCKETH_DIR`, else `../rocketh`), which of its files are pages, the two sections, the redirect table, the edit and GitHub links. |
+| `web/docs.config.js`                 | Where the rocketh checkout is (`ROCKETH_DIR`, else `../rocketh`), which of its files are pages, the two sections, the one redirect that is not the content's, the edit and GitHub links. |
 | `web/src/web-config.json`            | The site's name, description and canonical URL.                                                                                                            |
 | `web/vite.plugins.ts`                | `@rocketh/playground` resolved to the build in the rocketh checkout, never to an npm release.                                                              |
 | `web/src/lib/embeds/index.ts`        | `<rocketh-playground>`, registered as a custom element.                                                                                                    |
-| `web/e2e/tests/rocketh.e2e.ts`       | The site's end-to-end suite: every address the previous site served, the sidebar, code groups, containers, search, the playground, the theme, small screens. |
+| `web/e2e/tests/rocketh.e2e.ts`       | The site's end-to-end suite: every address the previous site served (a page, or a forwarding page that lands on one), the sidebar as the content declares it, code groups, containers, search, the playground, the theme, small screens. |
 | `web/static/icon.png`                | The icon, from rocketh's `public/icon.png`.                                                                                                                |
 | `.offshoot-omissions`                | What this repository drops from the template (its sample content, sample embeds and their suite), and why.                                                 |
 
@@ -53,7 +53,9 @@ The sidebar order is the content's: a `_sidebar.yaml` in each section folder of 
 
 ## Old addresses
 
-Every page the previous VitePress site served is served at the same address. An address that stops being a page goes in `redirects` in `web/docs.config.js`, which writes a forwarding page for it (see "Redirects" in the template's README). Today the table has one entry: `/introduction/`, where VitePress published the repository README, forwards to that README on GitHub.
+Every page the previous VitePress site served still answers at its address: as the page, or as a forwarding page to where it moved. When rocketh moves a page, the redirect goes in rocketh's `_redirects.yaml` (the template's `redirectsFile`), in the same commit as the move, so no state of rocketh's `main` has a page without its old address or a redirect without its page. `redirects` in `web/docs.config.js` holds only what is not about the content: `/introduction/`, where VitePress published the repository README, forwards to that README on GitHub. See "Redirects" in the template's README for the format, anchors included.
+
+The end-to-end suite (`web/e2e/tests/rocketh.e2e.ts`) checks every one of those addresses, and reads the sidebars and the redirects from the rocketh checkout rather than restating them, so it passes against rocketh's `main` across a restructure of its pages.
 
 ## The engine
 

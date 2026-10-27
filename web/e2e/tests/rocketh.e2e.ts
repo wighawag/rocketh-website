@@ -1,4 +1,8 @@
 import {test, expect, devices} from '@playwright/test';
+import {readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {parse as parseYaml} from 'yaml';
+import {loadDocsConfig} from '../../docs-engine/config.js';
 import {PLAIN_URL} from '../ports';
 
 /**
@@ -9,9 +13,57 @@ import {PLAIN_URL} from '../ports';
  * content (see .offshoot-omissions). It covers the same features on real
  * pages, plus what is specific to this site: every address the previous
  * (VitePress) site served, and the playground running for real.
+ *
+ * The content moves under this suite: a page can become a forwarding page
+ * (rocketh's `_redirects.yaml`), and the sidebars are rocketh's
+ * `_sidebar.yaml` files. So the suite reads both from the checkout it was
+ * built against rather than restating them, and it passes on rocketh's main
+ * before and after a restructure of its pages.
  */
 
 const url = (path: string) => `${PLAIN_URL}${path}`;
+
+const {contentRoot} = await loadDocsConfig();
+
+type NavItem = {text: string; link?: string; items?: NavItem[]};
+
+/** The links of a section's sidebar, as rocketh's `_sidebar.yaml` has them. */
+function sidebarLinks(section: string): {text: string; link: string}[] {
+	const items = parseYaml(
+		readFileSync(join(contentRoot, section, '_sidebar.yaml'), 'utf8'),
+	) as NavItem[];
+	const out: {text: string; link: string}[] = [];
+	const walk = (list: NavItem[]) => {
+		for (const item of list) {
+			if (item.link) out.push({text: item.text, link: item.link});
+			if (item.items) walk(item.items);
+		}
+	};
+	walk(items);
+	return out;
+}
+
+/** The sidebar label of the page at `link`. */
+function sidebarLabel(section: string, link: string): string {
+	const found = sidebarLinks(section).find((l) => l.link === link);
+	if (!found) throw new Error(`${link} is not in the ${section} sidebar`);
+	return found.text;
+}
+
+/**
+ * Where an address ends up: itself when it is a page, else the target of its
+ * forwarding page (whose meta refresh holds it, relative to the address).
+ */
+async function finalPath(
+	request: import('@playwright/test').APIRequestContext,
+	path: string,
+): Promise<string> {
+	const html = await (await request.get(url(path))).text();
+	if (!html.includes('data-testid="redirect"')) return path;
+	const target = html.match(/http-equiv="refresh" content="0; url=([^"]+)"/);
+	if (!target) throw new Error(`${path} forwards, but to nowhere`);
+	return new URL(target[1], url(path)).pathname;
+}
 
 async function hydrated(page: import('@playwright/test').Page) {
 	await expect(page.locator('#app-loader')).toHaveCount(0, {timeout: 15_000});
@@ -64,19 +116,34 @@ const VITEPRESS_PAGES = [
 ];
 
 test('serves every address the previous site served', async ({request}) => {
+	let pages = 0;
+	let forwarded = 0;
 	for (const path of VITEPRESS_PAGES) {
 		const response = await request.get(url(path));
 		expect(response.status(), path).toBe(200);
-		// Prerendered WITH its content, so search engines see the page. The
-		// two landing pages (`layout: home`) are a hero, not an article.
 		const html = await response.text();
-		if (path === '/' || path === '/hardhat-deploy/') {
-			expect(html, path).toContain('data-testid="hero"');
-		} else {
-			expect(html, path).toContain('data-pagefind-body');
+		if (html.includes('data-testid="redirect"')) {
+			// A page that moved: its forwarding page must land on a page, with
+			// its content prerendered (not on another forwarding page).
+			forwarded++;
+			const target = await finalPath(request, path);
+			expect(target, path).not.toBe(path);
+			const landed = await (await request.get(url(target))).text();
+			expect(landed, `${path} -> ${target}`).not.toContain(
+				'data-testid="redirect"',
+			);
+			expect(landed, `${path} -> ${target}`).toMatch(
+				/data-pagefind-body|data-testid="hero"/,
+			);
+			continue;
 		}
+		// Prerendered WITH its content, so search engines see the page. A
+		// landing page (`layout: home`) is a hero, not an article.
+		pages++;
+		expect(html, path).toMatch(/data-pagefind-body|data-testid="hero"/);
 	}
-	// The one that is no longer a page forwards (docs.config.js `redirects`).
+	expect(pages + forwarded).toBe(VITEPRESS_PAGES.length);
+	// One address was never a page of this site (docs.config.js `redirects`).
 	const moved = await request.get(url('/introduction/'));
 	expect(moved.status()).toBe(200);
 	expect(await moved.text()).toContain(
@@ -100,29 +167,12 @@ test('the home page links into both sections and to GitHub', async ({page}) => {
 	await expect(page.locator('h1')).toHaveText('Introduction');
 });
 
-test('keeps the sidebar order and labels of the previous site', async ({
-	page,
-}) => {
+test('shows the sidebar of the content, in its order', async ({page}) => {
 	await page.goto(url('/documentation/fork-runs/'));
 	const links = page.getByTestId('sidebar').first().getByRole('link');
-	await expect(links).toHaveText([
-		'Introduction',
-		'Installation and Setup',
-		'Core Concepts',
-		'Using rocketh',
-		'Examples',
-		'Using hardhat-deploy',
-		'Testing Deploy Scripts',
-		'Rehearsing on a Fork',
-		'Captured Transactions',
-		'Exporting and Verifying',
-		'Handling Unknown Signers',
-		'Guarding Execute Calls',
-		'Running Once, and Running Last',
-		'Production Hardening',
-		'Architecture Overview',
-		'Migrating from v1',
-	]);
+	await expect(links).toHaveText(
+		sidebarLinks('documentation').map((l) => l.text),
+	);
 });
 
 test('gives the hardhat-deploy landing page its own card', async ({page}) => {
@@ -134,8 +184,12 @@ test('gives the hardhat-deploy landing page its own card', async ({page}) => {
 	);
 });
 
-test('switches code-group tabs', async ({page}) => {
-	await page.goto(url('/hardhat-deploy/documentation/installation/'));
+test('switches code-group tabs', async ({page, request}) => {
+	await page.goto(
+		url(
+			await finalPath(request, '/hardhat-deploy/documentation/installation/'),
+		),
+	);
 	await hydrated(page);
 	const group = page.locator('[data-code-group]').first();
 	await group.getByRole('tab', {name: 'pnpm'}).click();
@@ -146,8 +200,8 @@ test('switches code-group tabs', async ({page}) => {
 	await expect(group).toContainText('pnpm dlx hardhat-deploy init');
 });
 
-test('renders ::: containers', async ({page}) => {
-	await page.goto(url('/documentation/migration/'));
+test('renders ::: containers', async ({page, request}) => {
+	await page.goto(url(await finalPath(request, '/documentation/migration/')));
 	await expect(page.locator('.callout-warning').first()).toContainText(
 		'Three built-in proxy names changed',
 	);
@@ -196,7 +250,7 @@ test('follows the system theme, and the toggle overrides it', async ({
 }) => {
 	const context = await browser.newContext({colorScheme: 'dark'});
 	const page = await context.newPage();
-	await page.goto(url('/documentation/core-concepts/'));
+	await page.goto(url('/documentation/fork-runs/'));
 	await hydrated(page);
 	await expect(page.locator('html')).toHaveClass(/dark/);
 	await page.getByTestId('theme-toggle').click();
@@ -211,8 +265,17 @@ test('opens the menu on a small screen', async ({browser}) => {
 	await hydrated(page);
 	await page.getByTestId('menu-button').click();
 	const dialog = page.getByRole('dialog');
-	await expect(dialog).toContainText('Rehearsing on a Fork');
-	await dialog.getByRole('link', {name: 'Captured Transactions'}).click();
+	await expect(dialog).toContainText(
+		sidebarLabel('documentation', '/documentation/fork-runs/'),
+	);
+	await dialog
+		.getByRole('link', {
+			name: sidebarLabel(
+				'documentation',
+				'/documentation/captured-transactions/',
+			),
+		})
+		.click();
 	await expect(page).toHaveURL(url('/documentation/captured-transactions/'));
 	await context.close();
 });
