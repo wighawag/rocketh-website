@@ -1,8 +1,8 @@
 {
-	"name": "Docs Template",
-	"title": "Docs Template",
-	"description": "A documentation site built from a folder of Markdown",
-	"canonicalURL": "https://localhost",
+	"name": "rocketh",
+	"title": "rocketh",
+	"description": "Framework-agnostic deployment system for EVM smart contracts",
+	"canonicalURL": "https://rocketh.dev",
 	"ENSName": null,
 	"themeColor": "#000000",
 	"appleStatusBarStyle": "black-translucent",

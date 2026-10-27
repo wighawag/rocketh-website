@@ -60,3 +60,20 @@
 # route `web/src/routes/[...path]/`. A static `+page.svelte` at `/` would take
 # precedence over it and hide the content's home page.
 web/src/routes/+page.svelte
+
+# The template's sample content. This site's content is the Markdown of the
+# rocketh repository (see `contentDir` in web/docs.config.js), so the samples
+# are neither built nor needed.
+docs
+
+# The template's sample embeds: this site registers `<rocketh-playground>`
+# instead (web/src/lib/embeds/index.ts), and nothing here uses the samples.
+web/src/lib/embeds/Counter.svelte
+web/src/lib/embeds/hello-element.ts
+
+# The template's end-to-end suite drives its SAMPLE content (its home page,
+# its guide, its articles). This site's suite drives the rocketh content
+# instead: web/e2e/tests/rocketh.e2e.ts covers the same features (navigation,
+# search, code groups, containers, theme, the small-screen menu, a redirect)
+# on real pages, plus the playground.
+web/e2e/tests/docs.e2e.ts

@@ -1,5 +1,5 @@
 {
-  "name": "tempalte-svelte-monorepo",
+  "name": "rocketh-website",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -32,5 +32,6 @@
     "stop": "zellij kill-session $npm_package_name",
     "start:pnpm": "pnpm -r dev",
     "start": "zellij-launcher a $npm_package_name || zellij -n zellij.kdl -s $npm_package_name"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

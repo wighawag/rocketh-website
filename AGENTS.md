@@ -44,3 +44,14 @@ This template renders a folder of Markdown (`docs/` by default, set in `web/docs
 This repo is the root of a template tree; other repos derive from it through a `stem` git remote and inherit `web/src/lib/core` wholesale, in several cases byte-identical. A change that is meaningful for a sibling belongs HERE rather than in the descendant that discovered it, or every sibling silently misses it. The two boundary tests above are stated at this level for the same reason: a rule inherited by every descendant is worth more than the same rule re-derived in each of them.
 
 A docs site made from this template should normally change only `web/docs.config.js`, `web/src/web-config.json`, `web/src/lib/embeds/`, the theme tokens in `web/src/app.css` and `web/static/`, plus its content. A fix or feature in the docs engine, `core/docs` or the docs components that is not specific to that site belongs here.
+
+# rocketh.dev (this repository)
+
+This repository is the SITE of rocketh.dev, made from `template-svelte-docs` (the `stem` remote). The CONTENT is the rocketh repository's Markdown (`index.md`, `documentation/`, `hardhat-deploy/`, `public/`), read from a rocketh checkout: `ROCKETH_DIR` when set, else the sibling `../rocketh`. See README.md.
+
+- **Content changes go to rocketh, not here.** A page, a sidebar (`<section>/_sidebar.yaml`), a logo: all in the rocketh repository.
+- **Site-specific changes stay here; anything generic goes to the template first** (a pull request on `template-svelte-docs`), then comes down through `stem`. What is site-specific is listed in README.md, "What is specific to this site". Extra Vite behaviour goes in `web/vite.plugins.ts`, never in `vite.config.ts`.
+- **The playground is never an npm release.** `web/vite.plugins.ts` aliases `@rocketh/playground` to the build in the rocketh checkout, so build it there first: `pnpm i && pnpm docs:widgets` in rocketh.
+- **Checks** need a built rocketh checkout: in `web/`, `pnpm check`, `pnpm test`, `pnpm format:check`, `pnpm build`, `pnpm test:e2e`. Point them at a rocketh worktree with `ROCKETH_DIR=<path>`.
+- **Deployment** is rocketh's `.github/workflows/deploy.yml`, which pins a commit of this repository. A change here reaches rocketh.dev only through a rocketh pull request that moves that pin and names the commit it was verified against.
+- **Files dropped from the template** are listed with their reason in `.offshoot-omissions`; keep it in step (`node scripts/check-omissions.mjs stem/main`).

@@ -1,53 +1,64 @@
-// What the docs site renders, and where it finds it. Every field is optional;
-// docs-engine/config.js has the full list, the defaults and what each means.
+// What the rocketh.dev site renders, and where it finds it. Every field is
+// optional; docs-engine/config.js has the full list, the defaults and what
+// each means.
 //
-// Point the site at other content for one build without editing this file:
+// The CONTENT is not in this repository: it is the Markdown of the rocketh
+// repository (github.com/wighawag/rocketh), so a page is edited, reviewed and
+// versioned with the code it documents. This repository is only the site.
 //
-//   DOCS_CONFIG=/path/to/other.config.js pnpm build
+// Where the rocketh checkout is:
+//
+//   - by default a sibling of this repository, `../rocketh` (that is
+//     `../../rocketh` from this file), which is how both are laid out locally
+//     and in rocketh's deploy workflow;
+//   - anywhere else with `ROCKETH_DIR`, resolved against the current
+//     directory: `ROCKETH_DIR=~/dev/worktrees/rocketh/my-branch pnpm build`.
+//
+// The playground widget is built from the same checkout (see vite.plugins.ts).
+
+import {resolve} from 'node:path';
+
+const rockethDir = process.env.ROCKETH_DIR
+	? resolve(process.cwd(), process.env.ROCKETH_DIR)
+	: '../../rocketh';
 
 /** @type {import('./docs-engine/config.js').DocsConfig} */
 export default {
-	// The Markdown folder, relative to this file. Anywhere on disk works: a
-	// sibling package (`../../docs`), or the root of another repository.
-	contentDir: '../docs',
+	contentDir: rockethDir,
 
-	// Which files are pages. Narrow it when the folder holds other Markdown
-	// (a repository root with a README, CONTRIBUTING and so on).
-	include: ['**/*.md'],
+	// The rocketh repository root holds a lot of other Markdown (READMEs of
+	// every package, work items, ADRs): only these are pages.
+	include: ['index.md', 'documentation/**/*.md', 'hardhat-deploy/**/*.md'],
 
-	// Where the content is mounted in the site.
 	base: '/',
 
-	// Served as-is at the mount point: `docs/public/logo.svg` is `/logo.svg`.
+	// Logos and social cards: `public/logo.svg` is `/logo.svg`.
 	publicDir: 'public',
 
-	// The header nav, in this order. Each section gets its own sidebar.
 	sections: [
-		{dir: 'guide', label: 'Guide'},
-		{dir: 'reference', label: 'Reference'},
-		{dir: 'articles', label: 'Articles'},
+		{dir: 'documentation', label: 'Documentation'},
+		{dir: 'hardhat-deploy', label: 'hardhat-deploy'},
 	],
 
-	// Dated pages with a list and a feed (`/feed.xml`).
-	articles: 'articles',
-
-	// Old addresses that must keep working, each forwarded to where its page
-	// lives now. A key is a site path; a value is a site path or an https URL.
-	// A forwarding page is written for each, and a target that is not a page
-	// fails the build.
+	// Old addresses that must keep working. Every page the previous
+	// (VitePress) site served is still served at the same address; this table
+	// covers the ones that are not a page any more.
 	redirects: {
-		'/guide/start/': '/guide/getting-started/',
+		// The VitePress site rewrote the repository README to `/introduction/`.
+		// It was linked from nowhere on the site, and the README is written for
+		// GitHub and npm (its links point into the repository), so the address
+		// forwards to the README where it reads as intended.
+		'/introduction/': 'https://github.com/wighawag/rocketh#readme',
 	},
 
-	// Links at the right of the header.
+	// The header's GitHub link, where the VitePress site had it.
 	socialLinks: [
-		{icon: 'github', link: 'https://github.com/wighawag/template-svelte-docs'},
+		{icon: 'github', link: 'https://github.com/wighawag/rocketh/#readme'},
 	],
 
-	// "Edit this page on GitHub".
 	editLink: {
-		repo: 'https://github.com/wighawag/template-svelte-docs',
+		repo: 'https://github.com/wighawag/rocketh',
 		branch: 'main',
-		dir: 'docs',
+		dir: '',
 	},
 };

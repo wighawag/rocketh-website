@@ -1,6 +1,52 @@
-import type {PluginOption} from 'vite';
+import type {Plugin, PluginOption} from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+import {existsSync} from 'node:fs';
+import {join} from 'node:path';
 import {docs} from './docs-engine/vite-plugin.js';
+import {loadDocsConfig} from './docs-engine/config.js';
+
+/**
+ * `@rocketh/playground`, taken from the rocketh checkout the content comes
+ * from (`contentDir` in docs.config.js), never from npm: the widget on a page
+ * must be the one of the same rocketh commit, and an npm release lags main.
+ *
+ * The two entries the site reaches are aliased to the package's `dist`, which
+ * rocketh builds with `pnpm docs:widgets`. Everything they import in turn
+ * (rocketh, viem, the in-browser EVM) is resolved from that package's own
+ * `node_modules`, that is from the rocketh workspace, so the rocketh checkout
+ * must be installed and built first. A missing build fails here, by name,
+ * rather than as an unresolved import deep in the bundle.
+ */
+function rockethPlayground(): Plugin {
+	let element = '';
+	return {
+		name: 'rocketh-playground',
+		enforce: 'pre',
+		async config() {
+			const {contentRoot} = await loadDocsConfig();
+			const pkg = join(contentRoot, 'packages', 'rocketh-playground');
+			element = join(pkg, 'dist', 'element', 'rocketh-playground.js');
+			return {
+				resolve: {
+					alias: [
+						{find: /^@rocketh\/playground\/element$/, replacement: element},
+						{
+							find: /^@rocketh\/playground$/,
+							replacement: join(pkg, 'dist', 'index.js'),
+						},
+					],
+				},
+			};
+		},
+		buildStart() {
+			if (!existsSync(element)) {
+				this.error(
+					`rocketh-playground: ${element} does not exist. Build it in the rocketh checkout first: \`pnpm i && pnpm docs:widgets\`.`,
+				);
+			}
+		},
+	};
+}
 
 /**
  * The vite plugins THIS project adds to the template's.
@@ -64,5 +110,5 @@ export function extraPlugins(): PluginOption[] {
 	// `vite.config.ts` guarantees and what Tailwind's own SvelteKit
 	// instructions require. If that ever needs to change, it changes there,
 	// for everyone, rather than here.
-	return [docs(), tailwindcss()];
+	return [docs(), rockethPlayground(), tailwindcss()];
 }
