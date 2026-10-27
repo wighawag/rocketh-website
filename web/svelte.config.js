@@ -1,6 +1,29 @@
 import adapter from '@sveltejs/adapter-static';
 import {execSync} from 'node:child_process';
 import {vitePreprocess} from '@sveltejs/vite-plugin-svelte';
+import {existsSync, statSync} from 'node:fs';
+import {join} from 'node:path';
+import {loadDocsConfig} from './docs-engine/config.js';
+
+const docsConfig = await loadDocsConfig();
+
+/**
+ * Whether a path the prerender crawl could not fetch is a file of the
+ * content's public folder. Those are copied into the build only AFTER it
+ * (docs-engine/postbuild.js), so the crawl cannot see them yet.
+ *
+ * @param {string} path
+ */
+function isContentPublicFile(path) {
+	const {publicRoot, base} = docsConfig;
+	if (!publicRoot || !path.startsWith(base)) return false;
+	// The crawl asks for `/logo.svg`, is redirected (trailingSlash: 'always')
+	// and reports `/logo.svg/`.
+	const rel = decodeURIComponent(path.slice(base.length)).replace(/\/$/, '');
+	if (!rel) return false;
+	const file = join(publicRoot, rel);
+	return existsSync(file) && statSync(file).isFile();
+}
 
 let VERSION = `timestamp_${Date.now()}`;
 try {
@@ -39,6 +62,18 @@ const config = {
 			pages: 'build',
 			fallback: '404.html', // SPA fallback - serves as 404 page on IPFS/static hosts
 		}),
+		prerender: {
+			// The crawl is the site's link checker: a link to a page that does not
+			// exist, or to an `#anchor` that is not on its page, FAILS the build.
+			// The docs engine reports the same problems earlier, with file and
+			// line; this is the net under it, and it also covers links that
+			// Svelte components render.
+			handleHttpError: ({path, message}) => {
+				if (isContentPublicFile(path)) return;
+				throw new Error(message);
+			},
+			handleMissingId: 'fail',
+		},
 		serviceWorker: {
 			// we handle it ourselves: the worker is src/service-worker/index.ts and
 			// registration is driven by src/lib/core/service-worker/index.ts
