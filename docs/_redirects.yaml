@@ -1,0 +1,7 @@
+# Old addresses of pages in this folder, each forwarded to where it lives now
+# (`redirectsFile` in web/docs.config.js). It sits with the content so that a
+# page and the redirect replacing it move in the same change. A key with an
+# `#anchor` forwards that one anchor on its own: here the FAQ's old Markdown
+# answers, which became a reference page.
+/guide/questions/: /guide/faq/
+'/guide/questions/#containers': /reference/markdown/#containers

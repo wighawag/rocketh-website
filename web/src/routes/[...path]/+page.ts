@@ -21,12 +21,20 @@ export const load: PageLoad = async ({params}) => {
 	const route = routeOfParam(params.path);
 	const redirect = docs.manifest.redirects[route];
 	if (redirect) {
-		return {route, meta: null, doc: null, isArticleList: false, redirect};
+		const redirectAnchors = docs.manifest.redirectAnchors[route] ?? {};
+		return {
+			route,
+			meta: null,
+			doc: null,
+			isArticleList: false,
+			redirect,
+			redirectAnchors,
+		};
 	}
 	const meta = findPage(docs.manifest, route) ?? null;
 	const loader = meta ? docs.loaders[meta.route] : undefined;
 	const isArticleList = route === docs.manifest.articles;
 	if (!loader && !isArticleList) error(404, 'Page not found');
 	const doc = loader ? (await loader()).default : null;
-	return {route, meta, doc, isArticleList, redirect: null};
+	return {route, meta, doc, isArticleList, redirect: null, redirectAnchors: {}};
 };

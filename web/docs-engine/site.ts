@@ -22,6 +22,7 @@ import {
 	type RenderResult,
 } from './markdown/render.js';
 import {resolveLink} from './markdown/links.js';
+import {parse as parseYaml} from 'yaml';
 import {generateSidebar, humanise, readNavFile} from './sidebar.js';
 
 export type Mode = 'dev' | 'build';
@@ -75,7 +76,11 @@ export class DocsSite {
 	private routeSet = new Set<string>();
 	/** Old site path -> where it forwards to, both normalised. */
 	private redirectMap = new Map<string, string>();
-	private redirectProblems: string[] = [];
+	/** Old site path -> anchor id -> where that anchor forwards to. */
+	private redirectAnchorMap = new Map<string, Map<string, string>>();
+	/** Which file each redirect key came from, for its problems. */
+	private redirectSources = new Map<string, string>();
+	private redirectProblems: {source: string; message: string}[] = [];
 	problems: Problem[] = [];
 	private cachedManifest: DocsManifest | null = null;
 
@@ -103,6 +108,9 @@ export class DocsSite {
 		if (source === null) return false;
 		if (this.entries.has(source)) return true;
 		if (source.endsWith(this.config.navFile)) return true;
+		if (this.config.redirectsFile && source === this.config.redirectsFile) {
+			return true;
+		}
 		return /\.md$/i.test(source) && this.isIncluded(source);
 	}
 
@@ -140,6 +148,9 @@ export class DocsSite {
 			roots.add(join(this.config.contentRoot, ...prefix));
 		}
 		if (this.config.publicRoot) roots.add(this.config.publicRoot);
+		if (this.config.redirectsFile) {
+			roots.add(join(this.config.contentRoot, this.config.redirectsFile));
+		}
 		return [...roots];
 	}
 
@@ -187,75 +198,194 @@ export class DocsSite {
 	}
 
 	/**
-	 * Normalise `redirects` from the config: keys to `/x/` shape, internal
-	 * targets to a route plus an optional `#anchor`. Whether each target lands
-	 * is decided by `check()`, once every page is known.
+	 * Normalise the redirects, from the config's `redirects` and from the
+	 * content's `redirectsFile`: keys to `/x/` shape, internal targets to a
+	 * route plus an optional `#anchor`. A key with an `#anchor` forwards that
+	 * one anchor of an old address somewhere else. Whether each target lands is
+	 * decided by `check()`, once every page is known.
 	 */
 	private loadRedirects(): void {
 		this.redirectMap = new Map();
+		this.redirectAnchorMap = new Map();
+		this.redirectSources = new Map();
 		this.redirectProblems = [];
-		for (const [from, to] of Object.entries(this.config.redirects ?? {})) {
-			if (!from.startsWith('/') || /[?#]/.test(from)) {
-				this.redirectProblems.push(
-					`redirect \`${from}\`: an old address must be a site path starting with \`/\`, without a query or an anchor`,
+		const configSource = this.configSourceName();
+		const entries: {from: string; to: unknown; source: string}[] =
+			Object.entries(this.config.redirects ?? {}).map(([from, to]) => ({
+				from,
+				to,
+				source: configSource,
+			}));
+		entries.push(...this.readRedirectsFile());
+
+		const anchored: {from: string; to: unknown; source: string}[] = [];
+		for (const entry of entries) {
+			const {from, source} = entry;
+			const problem = (message: string) =>
+				this.redirectProblems.push({
+					source,
+					message: `redirect \`${from}\`: ${message}`,
+				});
+			if (
+				typeof from !== 'string' ||
+				!from.startsWith('/') ||
+				from.includes('?')
+			) {
+				problem(
+					'an old address must be a site path starting with `/`, without a query',
 				);
+				continue;
+			}
+			if (from.includes('#')) {
+				anchored.push(entry);
 				continue;
 			}
 			const key = normaliseBase(from);
-			if (typeof to !== 'string' || !to.trim()) {
-				this.redirectProblems.push(`redirect \`${from}\`: no target`);
-				continue;
-			}
-			const target = to.trim();
-			if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('//')) {
-				if (!/^https?:\/\//i.test(target)) {
-					this.redirectProblems.push(
-						`redirect \`${from}\`: an external target must be an http(s) URL, not \`${target}\``,
-					);
-					continue;
-				}
-				this.redirectMap.set(key, target);
-				continue;
-			}
-			if (!target.startsWith('/')) {
-				this.redirectProblems.push(
-					`redirect \`${from}\`: the target \`${target}\` must be a site path starting with \`/\`, or an http(s) URL`,
+			if (this.redirectMap.has(key)) {
+				problem(
+					`is listed twice (in ${this.redirectSources.get(key)} and ${source})`,
 				);
 				continue;
 			}
-			const h = target.indexOf('#');
-			const path = h === -1 ? target : target.slice(0, h);
-			const hash = h === -1 ? '' : target.slice(h);
-			// A file route (`/feed.xml`) keeps its shape; a page gets its slash.
-			const last = path.split('/').at(-1) ?? '';
-			const route = last.includes('.') ? path : normaliseBase(path);
-			this.redirectMap.set(key, route + hash);
+			const target = this.normaliseRedirectTarget(entry.to, problem);
+			if (target === null) continue;
+			this.redirectMap.set(key, target);
+			this.redirectSources.set(key, source);
 		}
+
+		// After every plain key is known, since an anchor may only be forwarded
+		// from an address that is itself a redirect: a page that still exists
+		// keeps its own anchors, and nothing runs to forward them.
+		for (const entry of anchored) {
+			const {from, source} = entry;
+			const problem = (message: string) =>
+				this.redirectProblems.push({
+					source,
+					message: `redirect \`${from}\`: ${message}`,
+				});
+			const h = from.indexOf('#');
+			const key = normaliseBase(from.slice(0, h));
+			const id = decodeURIComponent(from.slice(h + 1));
+			if (!id) {
+				problem('an anchor key needs an id after `#`');
+				continue;
+			}
+			if (!this.redirectMap.has(key)) {
+				problem(
+					`\`${key}\` is not a redirect; an anchor can only be forwarded from an old address that is one`,
+				);
+				continue;
+			}
+			const anchors =
+				this.redirectAnchorMap.get(key) ?? new Map<string, string>();
+			if (anchors.has(id)) {
+				problem('is listed twice');
+				continue;
+			}
+			const target = this.normaliseRedirectTarget(entry.to, problem);
+			if (target === null) continue;
+			anchors.set(id, target);
+			this.redirectAnchorMap.set(key, anchors);
+			this.redirectSources.set(`${key}#${id}`, source);
+		}
+	}
+
+	/** The config file's name, as problems name it. */
+	private configSourceName(): string {
+		return this.config.configFile.split(/[\\/]/).at(-1) ?? 'config';
+	}
+
+	/**
+	 * The entries of the content's redirects file (`redirectsFile`), a YAML
+	 * map of old address to new one, or none when the site has no such file.
+	 * Keeping the table in the content means a page and the redirect that
+	 * replaces it change in the same commit, even when the site's code lives in
+	 * another repository.
+	 */
+	private readRedirectsFile(): {from: string; to: unknown; source: string}[] {
+		const name = this.config.redirectsFile;
+		if (!name) return [];
+		const file = join(this.config.contentRoot, name);
+		if (!existsSync(file)) return [];
+		let data: unknown;
+		try {
+			data = parseYaml(readFileSync(file, 'utf8'));
+		} catch (error) {
+			this.redirectProblems.push({
+				source: name,
+				message: `cannot read the redirects: ${error instanceof Error ? error.message : String(error)}`,
+			});
+			return [];
+		}
+		if (data === null || data === undefined) return [];
+		if (typeof data !== 'object' || Array.isArray(data)) {
+			this.redirectProblems.push({
+				source: name,
+				message: 'the redirects must be a map of old address to new address',
+			});
+			return [];
+		}
+		return Object.entries(data as Record<string, unknown>).map(
+			([from, to]) => ({
+				from,
+				to,
+				source: name,
+			}),
+		);
+	}
+
+	/**
+	 * A redirect's target as the manifest holds it: an http(s) URL as is, a
+	 * site path as a route plus an optional `#anchor`. Null, with the problem
+	 * reported, when it is neither.
+	 */
+	private normaliseRedirectTarget(
+		to: unknown,
+		problem: (message: string) => void,
+	): string | null {
+		if (typeof to !== 'string' || !to.trim()) {
+			problem('no target');
+			return null;
+		}
+		const target = to.trim();
+		if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith('//')) {
+			if (!/^https?:\/\//i.test(target)) {
+				problem(`an external target must be an http(s) URL, not \`${target}\``);
+				return null;
+			}
+			return target;
+		}
+		if (!target.startsWith('/')) {
+			problem(
+				`the target \`${target}\` must be a site path starting with \`/\`, or an http(s) URL`,
+			);
+			return null;
+		}
+		const h = target.indexOf('#');
+		const path = h === -1 ? target : target.slice(0, h);
+		const hash = h === -1 ? '' : target.slice(h);
+		// A file route (`/feed.xml`) keeps its shape; a page gets its slash.
+		const last = path.split('/').at(-1) ?? '';
+		const route = last.includes('.') ? path : normaliseBase(path);
+		return route + hash;
 	}
 
 	/** Problems with the redirects: a target that is not a page, and so on. */
 	private checkRedirects(idsByRoute: Map<string, Set<string>>): Problem[] {
-		const source = this.config.configFile.split(/[\\/]/).at(-1) ?? 'config';
-		const problems: Problem[] = this.redirectProblems.map((message) => ({
-			source,
-			line: null,
-			message,
-		}));
+		const problems: Problem[] = this.redirectProblems.map(
+			({source, message}) => ({
+				source,
+				line: null,
+				message,
+			}),
+		);
 		const pageRoutes = new Set([...this.sources.values(), ...this.extraRoutes]);
-		for (const [from, to] of this.redirectMap) {
-			const report = (message: string) =>
-				problems.push({
-					source,
-					line: null,
-					message: `redirect \`${from}\`: ${message}`,
-				});
-			if (pageRoutes.has(from)) {
-				report(
-					'is also a page; a page and a forwarding page cannot share an address',
-				);
-				continue;
-			}
-			if (/^[a-z][a-z0-9+.-]*:/i.test(to)) continue;
+		const checkTarget = (
+			from: string,
+			to: string,
+			report: (m: string) => void,
+		) => {
+			if (/^[a-z][a-z0-9+.-]*:/i.test(to)) return;
 			const h = to.indexOf('#');
 			const route = h === -1 ? to : to.slice(0, h);
 			if (this.redirectMap.has(route)) {
@@ -270,6 +400,27 @@ export class DocsSite {
 				if (ids && !ids.has(id)) {
 					report(`its target \`${to}\` has no id "${id}"`);
 				}
+			}
+		};
+		const reporter = (from: string) => (message: string) =>
+			problems.push({
+				source: this.redirectSources.get(from) ?? this.configSourceName(),
+				line: null,
+				message: `redirect \`${from}\`: ${message}`,
+			});
+		for (const [from, to] of this.redirectMap) {
+			const report = reporter(from);
+			if (pageRoutes.has(from)) {
+				report(
+					'is also a page; a page and a forwarding page cannot share an address',
+				);
+				continue;
+			}
+			checkTarget(from, to, report);
+		}
+		for (const [from, anchors] of this.redirectAnchorMap) {
+			for (const [id, to] of anchors) {
+				checkTarget(`${from}#${id}`, to, reporter(`${from}#${id}`));
 			}
 		}
 		return problems;
@@ -513,6 +664,12 @@ export class DocsSite {
 					}
 				: null,
 			redirects: Object.fromEntries(this.redirectMap),
+			redirectAnchors: Object.fromEntries(
+				[...this.redirectAnchorMap].map(([from, anchors]) => [
+					from,
+					Object.fromEntries(anchors),
+				]),
+			),
 			socialLinks: (this.config.socialLinks ?? []).map((l) => ({
 				link: l.link,
 				icon: l.icon ?? null,

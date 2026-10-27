@@ -180,6 +180,15 @@ test('forwards an old address to its new page', async ({page}) => {
 	await expect(page.locator('h1')).toHaveText('Getting started');
 });
 
+test('forwards an anchor of an old address on its own', async ({page}) => {
+	// `docs/_redirects.yaml`: the old address forwards to the FAQ, except its
+	// `#containers` anchor, which moved to the Markdown reference.
+	await page.goto(url('/guide/questions/#containers'));
+	await expect(page).toHaveURL(url('/reference/markdown/#containers'));
+	await page.goto(url('/guide/questions/#other'));
+	await expect(page).toHaveURL(url('/guide/faq/#other'));
+});
+
 test('shows a 404 page for an unknown address', async ({page}) => {
 	// What a static host serves for an unknown path (see `_redirects`): the
 	// SPA fallback, which routes the address it is loaded at.
