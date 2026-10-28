@@ -163,6 +163,12 @@ export type AssetImport = {placeholder: string; file: string};
 export type LinkOptions = LinkContext & {
 	/** Absolute path of the content root, for images next to the page. */
 	contentRoot: string;
+	/**
+	 * Absolute path of a content-relative file, when the content is not one
+	 * folder (articles from a folder of their own). Defaults to joining it to
+	 * `contentRoot`.
+	 */
+	fileOf?: (source: string) => string;
 };
 
 function isFile(path: string): boolean {
@@ -228,12 +234,12 @@ export function rewriteLinks(
 			case 'dead': {
 				// An image beside the Markdown file: let Vite own it.
 				if (attr === 'src' && !value.startsWith('/')) {
-					const file = join(
-						ctx.contentRoot,
-						posix.normalize(
-							posix.join(posix.dirname(ctx.source), value.split(/[?#]/)[0]),
-						),
+					const source = posix.normalize(
+						posix.join(posix.dirname(ctx.source), value.split(/[?#]/)[0]),
 					);
+					const file = ctx.fileOf
+						? ctx.fileOf(source)
+						: join(ctx.contentRoot, source);
 					if (isFile(file)) {
 						const placeholder = `__DOCS_ASSET_${assets.length}__`;
 						assets.push({placeholder, file});

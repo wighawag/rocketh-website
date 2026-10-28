@@ -81,7 +81,13 @@ export function docs(): Plugin {
 					fs: {
 						// Setting `allow` replaces Vite's default, so the workspace
 						// root goes back in alongside the content folder.
-						allow: [searchForWorkspaceRoot(process.cwd()), config.contentRoot],
+						allow: [
+							searchForWorkspaceRoot(process.cwd()),
+							config.contentRoot,
+							...(config.articlesSource?.root
+								? [config.articlesSource.root]
+								: []),
+						],
 					},
 				},
 			};
