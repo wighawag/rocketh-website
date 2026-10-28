@@ -143,7 +143,14 @@ test('lists articles and serves a feed', async ({page, request}) => {
 	]);
 	const feed = await request.get(url('/feed.xml'));
 	expect(feed.ok()).toBe(true);
-	expect(await feed.text()).toContain('<title>Hello, world</title>');
+	const xml = await feed.text();
+	expect(xml).toContain('<title>Hello, world</title>');
+	// A draft article stays in the repository but out of the build.
+	expect(xml).not.toContain('Coming next');
+	await expect(page.getByTestId('draft-badge')).toHaveCount(0);
+	expect(
+		(await request.get(url('/articles/2026-03-01-coming-next/'))).status(),
+	).toBe(404);
 });
 
 test('opens the menu on a small screen', async ({browser}) => {
