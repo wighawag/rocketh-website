@@ -40,9 +40,11 @@ export default {
 		{dir: 'hardhat-deploy', label: 'hardhat-deploy'},
 	],
 
-	// Old addresses that must keep working. Every page the previous
-	// (VitePress) site served is still served at the same address; this table
-	// covers the ones that are not a page any more.
+	// Old addresses that must keep working. A page of the content that moves
+	// is forwarded by rocketh's own `_redirects.yaml` (`redirectsFile`, the
+	// template's default name), so the page and its redirect change in the
+	// same rocketh commit. This table holds the one address that was never a
+	// page of the content.
 	redirects: {
 		// The VitePress site rewrote the repository README to `/introduction/`.
 		// It was linked from nowhere on the site, and the README is written for

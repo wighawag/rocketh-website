@@ -40,6 +40,9 @@
 	<RedirectPage
 		href={route(data.redirect)}
 		canonical={new URL(data.redirect, canonicalURL).href}
+		anchors={Object.fromEntries(
+			Object.entries(data.redirectAnchors).map(([id, to]) => [id, route(to)]),
+		)}
 	/>
 {:else if data.isArticleList}
 	<ArticlesPage
