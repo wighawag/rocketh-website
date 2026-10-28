@@ -35,6 +35,35 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  */
 
 /**
+ * @typedef {object} ArticlesConfig
+ * @property {string} dir Where the articles are in the site: `articles` lists
+ *   them at `<base>articles/` and puts `hello.md` at `<base>articles/hello/`.
+ *   Without `contentDir`, it is also the top-level folder of the content
+ *   directory that holds them, which is what the string form means.
+ * @property {string} [contentDir] A folder of their own, relative to the
+ *   config file, for articles that do not live with the docs (the docs come
+ *   from another repository, say). Its files are mounted at `dir`, as if they
+ *   were the content directory's `<dir>/` folder, so links between the two
+ *   work in both directions, relative ones included. The content directory's
+ *   own `<dir>/` folder is then left out.
+ * @property {string[]} [include] Globs of the articles, relative to
+ *   `contentDir`. Defaults to every `.md` file. Only used with `contentDir`.
+ * @property {EditLinkConfig | null} [editLink] The "edit this page" link of
+ *   the articles, `dir` being the path of `contentDir` inside `repo`. Only
+ *   used with `contentDir`, and none by default: the site's `editLink` points
+ *   at the docs' repository, which does not hold these files.
+ */
+
+/**
+ * @typedef {object} ResolvedArticles
+ * @property {string} dir
+ * @property {string | null} root Absolute path of the articles' own folder,
+ *   null when they are a folder of the content directory.
+ * @property {string[]} include
+ * @property {EditLinkConfig | null} editLink
+ */
+
+/**
  * @typedef {object} DocsConfig
  * @property {string} [contentDir] The Markdown folder, relative to the config
  *   file. It may live anywhere: `../docs`, a sibling package, the root of
@@ -49,8 +78,10 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  *   served as-is at the mount point (images, logos), like VitePress's `public`.
  * @property {SectionConfig[]} [sections] The top-level sections, in order.
  *   Defaults to every top-level folder that has pages.
- * @property {string | null} [articles] The top-level folder holding dated
- *   articles (release notes, tutorials). It gets a list page and a feed.
+ * @property {string | ArticlesConfig | null} [articles] Dated articles
+ *   (release notes, announcements, tutorials), with a list page and a feed.
+ *   A string names a top-level folder of `contentDir`; an object can take
+ *   them from a folder of their own (see `ArticlesConfig`).
  * @property {EditLinkConfig | null} [editLink]
  * @property {{light: string, dark: string}} [codeThemes] Shiki themes.
  * @property {string} [navFile] Name of the per-section file that replaces the
@@ -78,6 +109,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  *   editLink: EditLinkConfig | null,
  *   publicDir: string | null,
  *   articles: string | null,
+ *   articlesSource: ResolvedArticles | null,
  *   configFile: string,
  *   contentRoot: string,
  *   publicRoot: string | null,
@@ -142,12 +174,49 @@ export function resolveConfig(raw, configFile) {
 	const publicRoot = merged.publicDir
 		? resolve(contentRoot, merged.publicDir)
 		: null;
+	const articlesSource = resolveArticles(merged.articles, from);
 	return {
 		...merged,
+		// The folder name, as the string form gives it: what the rest of the
+		// engine (and any code reading the config) keys articles by.
+		articles: articlesSource?.dir ?? null,
+		articlesSource,
 		base: normaliseBase(merged.base),
 		configFile,
 		contentRoot,
 		publicRoot: publicRoot && existsSync(publicRoot) ? publicRoot : null,
+	};
+}
+
+/**
+ * The `articles` field in one shape, whichever form it was given in.
+ *
+ * @param {string | ArticlesConfig | null | undefined} articles
+ * @param {string} from The config file's folder.
+ * @returns {ResolvedArticles | null}
+ */
+export function resolveArticles(articles, from) {
+	if (!articles) return null;
+	const options = typeof articles === 'string' ? {dir: articles} : articles;
+	const dir =
+		typeof options.dir === 'string'
+			? options.dir.trim().replace(/^\/+|\/+$/g, '')
+			: '';
+	if (!dir || dir.includes('/')) {
+		throw new Error(
+			`docs: \`articles\` needs a \`dir\`, one folder name such as 'articles' (got ${JSON.stringify(options.dir)})`,
+		);
+	}
+	if (!options.contentDir) {
+		return {dir, root: null, include: [], editLink: null};
+	}
+	return {
+		dir,
+		root: isAbsolute(options.contentDir)
+			? options.contentDir
+			: resolve(from, options.contentDir),
+		include: options.include ?? ['**/*.md'],
+		editLink: options.editLink ?? null,
 	};
 }
 

@@ -104,11 +104,14 @@ export type DocsManifest = {
 	sections: Section[];
 	/** Site path of the articles list, when the site has articles. */
 	articles: string | null;
-	editLink: {
-		/** `{path}` is replaced by the page's `source`. */
-		pattern: string;
-		text: string;
-	} | null;
+	editLink: EditLinkPattern | null;
+	/**
+	 * Set when the articles come from a folder of their own rather than from
+	 * the content directory: their `dir` (the `section` of every page from
+	 * there) and their own edit link, `{path}` being the page's `source`
+	 * without its `<dir>/`.
+	 */
+	articlesFolder: {dir: string; editLink: EditLinkPattern | null} | null;
 	/**
 	 * Old site paths, each forwarded to a new one: a site path (possibly with
 	 * an `#anchor`) or an absolute URL. Keys are in `/x/` shape.
@@ -122,6 +125,9 @@ export type DocsManifest = {
 	/** Links at the right of the header (`socialLinks` in the config). */
 	socialLinks: SocialLink[];
 };
+
+/** "Edit this page": `{path}` is replaced by the page's `source`. */
+export type EditLinkPattern = {pattern: string; text: string};
 
 /** A link in the header to somewhere else: the repository, a chat. */
 export type SocialLink = {link: string; icon: string | null; label: string};

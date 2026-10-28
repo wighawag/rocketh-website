@@ -2,7 +2,9 @@
 
 The site of [rocketh.dev](https://rocketh.dev), the documentation of [rocketh](https://github.com/wighawag/rocketh) and hardhat-deploy.
 
-This repository holds the SITE only. The content (the Markdown pages, the logos and social cards) lives in the rocketh repository, next to the code it documents: `index.md`, `documentation/`, `hardhat-deploy/` and `public/` at its root, and the playground widget is built from its `packages/rocketh-playground`. A change to a page is a pull request on rocketh, not here.
+This repository holds the SITE, and the articles. The documentation (the Markdown pages, the logos and social cards) lives in the rocketh repository, next to the code it documents: `index.md`, `documentation/`, `hardhat-deploy/` and `public/` at its root, and the playground widget is built from its `packages/rocketh-playground`. A change to a page is a pull request on rocketh, not here.
+
+The articles are the exception, and live in `articles/` here: a page of the documentation describes the code and changes with it, while an article is a dated piece about the project and belongs to the site. They are listed at `/articles/`, linked from the header, and in the feed at `/feed.xml`. An article is a Markdown file with a `title` and a `date` in its frontmatter (see the template's README, "Articles"); it links to the documentation by site path (`/documentation/unknown-signers/`), and the build checks those links against the rocketh checkout like any other.
 
 It is made from [template-svelte-docs](https://github.com/wighawag/template-svelte-docs), tracked as the `stem` remote: an improvement that is not specific to rocketh.dev goes to the template first and comes down from there.
 
@@ -11,7 +13,7 @@ It is made from [template-svelte-docs](https://github.com/wighawag/template-svel
 rocketh.dev is GitHub Pages of the rocketh repository. Its `.github/workflows/deploy.yml` checks out rocketh and this repository side by side, at a commit of this repository it pins, builds the playground in the rocketh workspace, builds this site against that checkout, and publishes `web/build`. So:
 
 - a change to rocketh's content is live on the next push to rocketh's `main`;
-- a change here is live once rocketh's workflow is pointed at the new commit of this repository, in a rocketh pull request that says what it was verified against.
+- a change here, a new article included, is live once rocketh's workflow is pointed at the new commit of this repository, in a rocketh pull request that says what it was verified against.
 
 ## Working on it
 
@@ -41,11 +43,12 @@ From `web/`: `pnpm check`, `pnpm test`, `pnpm format:check`, and `pnpm test:e2e`
 
 | Where                                | What                                                                                                                                                       |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `web/docs.config.js`                 | Where the rocketh checkout is (`ROCKETH_DIR`, else `../rocketh`), which of its files are pages, the two sections, the one redirect that is not the content's, the edit and GitHub links. |
+| `web/docs.config.js`                 | Where the rocketh checkout is (`ROCKETH_DIR`, else `../rocketh`), which of its files are pages, the sections, the articles folder, the one redirect that is not the content's, the edit and GitHub links. |
+| `articles/`                          | The articles (`articles` in `web/docs.config.js`, a folder of their own), with their own edit link to this repository.                                       |
 | `web/src/web-config.json`            | The site's name, description and canonical URL.                                                                                                            |
 | `web/vite.plugins.ts`                | `@rocketh/playground` resolved to the build in the rocketh checkout, never to an npm release.                                                              |
 | `web/src/lib/embeds/index.ts`        | `<rocketh-playground>`, registered as a custom element.                                                                                                    |
-| `web/e2e/tests/rocketh.e2e.ts`       | The site's end-to-end suite: every address the previous site served (a page, or a forwarding page that lands on one), the sidebar as the content declares it, code groups, containers, search, the playground, the theme, small screens. |
+| `web/e2e/tests/rocketh.e2e.ts`       | The site's end-to-end suite: every address the previous site served (a page, or a forwarding page that lands on one), the sidebar as the content declares it, the articles (list, edit link, feed), code groups, containers, search, the playground, the theme, small screens. |
 | `web/static/icon.png`                | The icon, from rocketh's `public/icon.png`.                                                                                                                |
 | `.offshoot-omissions`                | What this repository drops from the template (its sample content, sample embeds and their suite), and why.                                                 |
 

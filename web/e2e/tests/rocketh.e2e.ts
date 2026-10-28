@@ -168,6 +168,38 @@ test('the home page links into both sections and to GitHub', async ({page}) => {
 	await expect(page.locator('h1')).toHaveText('Introduction');
 });
 
+test("lists this repository's articles, edits them here, and feeds them", async ({
+	page,
+	request,
+}) => {
+	// From the header, as a reader finds them.
+	await page.goto(url('/documentation/'));
+	await hydrated(page);
+	await page.getByRole('link', {name: 'Articles', exact: true}).first().click();
+	await expect(page).toHaveURL(url('/articles/'));
+	const list = page.getByTestId('article-list').getByRole('heading');
+	const count = await list.count();
+	expect(count).toBeGreaterThan(0);
+
+	// Every article is in the feed, at its own address.
+	const feed = await (await request.get(url('/feed.xml'))).text();
+	expect(feed.match(/<item>/g)).toHaveLength(count);
+
+	// An article comes from articles/ in THIS repository, so its edit link
+	// points here, not at rocketh.
+	await list.first().getByRole('link').click();
+	await expect(page).toHaveURL(/\/articles\/[^/]+\/$/);
+	const file = new URL(page.url()).pathname.split('/').at(-2);
+	await expect(page.locator('article time')).toBeVisible();
+	await expect(
+		page.getByRole('link', {name: 'Edit this page on GitHub'}),
+	).toHaveAttribute(
+		'href',
+		`https://github.com/wighawag/rocketh-website/edit/main/articles/${file}.md`,
+	);
+	expect(feed).toContain(`<link>https://rocketh.dev/articles/${file}/</link>`);
+});
+
 test('shows the sidebar of the content, in its order', async ({page}) => {
 	await page.goto(url('/documentation/fork-runs/'));
 	const links = page.getByTestId('sidebar').first().getByRole('link');

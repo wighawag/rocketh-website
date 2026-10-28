@@ -98,11 +98,14 @@ export function editLink(
 	manifest: DocsManifest,
 	page: PageMeta,
 ): {href: string; text: string} | null {
-	if (!manifest.editLink || !page.editLink) return null;
-	return {
-		href: manifest.editLink.pattern.replace('{path}', page.source),
-		text: manifest.editLink.text,
-	};
+	if (!page.editLink) return null;
+	const folder = manifest.articlesFolder;
+	const own = !!folder && page.section === folder.dir;
+	// An article from a folder of its own is edited in ITS repository.
+	const edit = own ? folder.editLink : manifest.editLink;
+	if (!edit) return null;
+	const path = own ? page.source.slice(folder.dir.length + 1) : page.source;
+	return {href: edit.pattern.replace('{path}', path), text: edit.text};
 }
 
 /** The articles, newest first. */

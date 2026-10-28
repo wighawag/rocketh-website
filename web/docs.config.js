@@ -38,7 +38,23 @@ export default {
 	sections: [
 		{dir: 'documentation', label: 'Documentation'},
 		{dir: 'hardhat-deploy', label: 'hardhat-deploy'},
+		{dir: 'articles', label: 'Articles'},
 	],
+
+	// The articles are THIS repository's, not rocketh's: a page of the docs
+	// describes the code and changes with it, an article is a dated piece
+	// about the project and belongs to the site. They are mounted at
+	// `/articles/` next to the content, so an article links to a page as
+	// `/documentation/...` and the build checks that link like any other.
+	articles: {
+		dir: 'articles',
+		contentDir: '../articles',
+		editLink: {
+			repo: 'https://github.com/wighawag/rocketh-website',
+			branch: 'main',
+			dir: 'articles',
+		},
+	},
 
 	// Old addresses that must keep working. A page of the content that moves
 	// is forwarded by rocketh's own `_redirects.yaml` (`redirectsFile`, the
