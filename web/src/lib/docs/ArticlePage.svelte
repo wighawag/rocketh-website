@@ -31,6 +31,12 @@
 				>{formatDate(meta.date)}</time
 			>
 		{/if}
+		{#if meta.draft}
+			<span
+				class="ml-2 rounded border px-1.5 py-0.5 text-xs text-muted-foreground"
+				data-testid="draft-badge">Draft: not in a build</span
+			>
+		{/if}
 		<div class="docs-prose prose max-w-none">
 			{#if !doc.hasH1}<h1>{doc.title}</h1>{/if}
 			<DocContent html={doc.html} />

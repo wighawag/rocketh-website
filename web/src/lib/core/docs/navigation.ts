@@ -108,6 +108,18 @@ export function editLink(
 	return {href: edit.pattern.replace('{path}', path), text: edit.text};
 }
 
+/**
+ * What the articles list says when it lists nothing: `coming-soon` when the
+ * build left draft articles out, `none` when there are none at all, null when
+ * there is something to list.
+ */
+export function emptyArticles(
+	manifest: DocsManifest,
+): 'coming-soon' | 'none' | null {
+	if (articles(manifest).length > 0) return null;
+	return manifest.pendingArticles > 0 ? 'coming-soon' : 'none';
+}
+
 /** The articles, newest first. */
 export function articles(manifest: DocsManifest): PageMeta[] {
 	return manifest.pages

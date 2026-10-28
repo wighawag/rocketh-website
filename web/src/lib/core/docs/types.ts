@@ -51,6 +51,11 @@ export type PageMeta = {
 	toc: boolean;
 	/** `editLink: false` hides the edit link. */
 	editLink: boolean;
+	/**
+	 * `draft: true`. Only ever true under the dev server, which shows drafts;
+	 * a build leaves them out.
+	 */
+	draft: boolean;
 };
 
 /** One sidebar entry: a link, a group of entries, or both. */
@@ -104,6 +109,12 @@ export type DocsManifest = {
 	sections: Section[];
 	/** Site path of the articles list, when the site has articles. */
 	articles: string | null;
+	/**
+	 * How many articles this build left out because they are drafts, so the
+	 * list can say that something is coming rather than that nothing is.
+	 * Always 0 under the dev server, which shows drafts.
+	 */
+	pendingArticles: number;
 	editLink: EditLinkPattern | null;
 	/**
 	 * Set when the articles come from a folder of their own rather than from

@@ -5,7 +5,11 @@ import {dirname, join} from 'node:path';
 import {resolveArticles, resolveConfig} from '../../docs-engine/config.js';
 import {DocsSite} from '../../docs-engine/site';
 import {searchDocument} from '../../docs-engine/search';
-import {articles, editLink} from '../../src/lib/core/docs/navigation';
+import {
+	articles,
+	editLink,
+	emptyArticles,
+} from '../../src/lib/core/docs/navigation';
 import {renderFeed} from '../../src/lib/core/docs/feed';
 
 // Articles from a folder of their own (`articles: {dir, contentDir}`): the
@@ -265,5 +269,71 @@ describe('articles in the content directory (the string form)', () => {
 		expect(m.pages.find((p) => p.route === '/news/stale/')?.layout).toBe(
 			'article',
 		);
+	});
+});
+
+describe('draft articles: kept in the repository, out of the build', () => {
+	async function onlyDrafts(
+		mode: 'dev' | 'build',
+		files: Record<string, string>,
+	) {
+		const root = mkdtempSync(join(tmpdir(), 'docs-pending-'));
+		write(root, {'index.md': '# Home\n', ...files});
+		try {
+			const s = new DocsSite(
+				resolveConfig({contentDir: root, articles: 'news'}, join(root, 'c.js')),
+				mode,
+			);
+			await s.load();
+			return s.manifest();
+		} finally {
+			rmSync(root, {recursive: true, force: true});
+		}
+	}
+
+	it('counts the drafts a build left out, and says they are coming', async () => {
+		const m = await onlyDrafts('build', {
+			'news/index.md': '---\ndraft: true\n---\n# News\n',
+			'news/2026-01-01-soon.md':
+				'---\ndate: 2026-01-01\ndraft: true\n---\n# Soon\n',
+		});
+		expect(m.pages.map((p) => p.route)).toEqual(['/']);
+		// the folder's own index is not an article, draft or not
+		expect(m.pendingArticles).toBe(1);
+		expect(articles(m)).toEqual([]);
+		expect(emptyArticles(m)).toBe('coming-soon');
+	});
+
+	it('says there are none when there is nothing at all', async () => {
+		const m = await onlyDrafts('build', {'news/index.md': '# News\n'});
+		expect(m.pendingArticles).toBe(0);
+		expect(emptyArticles(m)).toBe('none');
+	});
+
+	it('has nothing to say when an article is published', async () => {
+		const m = await onlyDrafts('build', {
+			'news/2026-01-01-soon.md':
+				'---\ndate: 2026-01-01\ndraft: true\n---\n# Soon\n',
+			'news/2025-01-01-out.md': '---\ndate: 2025-01-01\n---\n# Out\n',
+		});
+		expect(m.pendingArticles).toBe(1);
+		expect(emptyArticles(m)).toBeNull();
+		expect(m.pages.every((p) => p.draft === false)).toBe(true);
+	});
+
+	it('shows drafts under the dev server, marked as drafts', async () => {
+		const m = await onlyDrafts('dev', {
+			'news/2026-01-01-soon.md':
+				'---\ndate: 2026-01-01\ndraft: true\n---\n# Soon\n',
+		});
+		expect(m.pendingArticles).toBe(0);
+		expect(articles(m).map((p) => [p.route, p.draft])).toEqual([
+			['/news/2026-01-01-soon/', true],
+		]);
+		expect(emptyArticles(m)).toBeNull();
+	});
+
+	it('counts drafts in an articles folder of their own the same way', async () => {
+		expect((await site()).manifest().pendingArticles).toBe(1);
 	});
 });
