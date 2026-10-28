@@ -62,7 +62,15 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  *   site root, whatever `base` is) and gets a forwarding page in the build.
  *   Each value is a site path of a page (an `#anchor` may follow), or an
  *   absolute `https://` URL. A key that is also a page, or a value that is
- *   not one, fails the build like a dead link.
+ *   not one, fails the build like a dead link. A key may also name one anchor
+ *   of an old address (`'/old/path/#section': '/elsewhere/'`), forwarded on
+ *   its own when the reader arrives with it; the address itself must then be
+ *   a key too.
+ * @property {string | null} [redirectsFile] A YAML file of the content
+ *   directory holding more redirects, in the same shape as `redirects`, so
+ *   that moving a page and forwarding its old address can happen in one change
+ *   to the content. Defaults to `_redirects.yaml`; read when it exists. A key
+ *   listed both there and in `redirects` fails the build.
  */
 
 /**
@@ -89,6 +97,7 @@ export const DEFAULTS = Object.freeze({
 	codeThemes: {light: 'github-light', dark: 'github-dark'},
 	navFile: '_sidebar.yaml',
 	redirects: {},
+	redirectsFile: '_redirects.yaml',
 	socialLinks: [],
 });
 

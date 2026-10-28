@@ -43,6 +43,8 @@ Everything about the content is in `web/docs.config.js`. Every field is optional
 | `editLink`   | none              | `{repo, branch, dir, text}`: "edit this page" links to `<repo>/edit/<branch>/<dir>/<file>`.               |
 | `codeThemes` | GitHub light/dark | The two Shiki themes.                                                                                      |
 | `navFile`    | `_sidebar.yaml`   | The file name of a section's explicit sidebar.                                                             |
+| `redirects`  | none              | Old addresses forwarded to their new page, see [Redirects](#redirects).                                    |
+| `redirectsFile` | `_redirects.yaml` | A YAML file of `contentDir` holding more redirects, read when it exists, see [Redirects](#redirects).   |
 | `socialLinks` | none             | Links at the right of the header: `[{icon: 'github', link, label}]`. `github` is drawn; others show `label`. |
 | `redirects`  | none              | Old addresses that keep working: `{'/old/path/': '/new/path/'}`. See [Redirects](#redirects).             |
 
@@ -123,7 +125,16 @@ redirects: {
 ```
 
 - A key is the old address, as a site path from the site root (whatever `base` is). A value is the page it moved to, as a site path with an optional `#anchor`, or an absolute `http(s)` URL.
+- A key may name one anchor of an old address, `'/guide/old-faq/#install': '/guide/install/'`, when a page was split and that section went somewhere other than the rest. A reader arriving at the old address with that anchor goes there instead; the old address itself must be a key too.
 - Each key gets a forwarding page in the build, so it works on any static host, with no server rules: an inline script sends the reader on (keeping the `#anchor` they arrived with, unless the target names one), a meta refresh does the same without JavaScript, and the page links to the target and names it as `rel=canonical`. It is marked `noindex` and left out of search. Under `vite dev` the same page is served.
+- The same table can live in the content, in a YAML file named by `redirectsFile` (`_redirects.yaml` at the root of `contentDir` by default), read when it exists. This is the place for it when the content is in another repository than the site: a page that moves and the redirect that replaces it then change in the same commit, and no state of either repository has a forwarding page pointing at a page that does not exist yet. A key listed both there and in `redirects` fails the build.
+
+  ```yaml
+  # docs/_redirects.yaml
+  /guide/questions/: /guide/faq/
+  '/guide/questions/#containers': /reference/markdown/#containers
+  ```
+
 - The table is checked like a link: a key that is also a page, a target that is not a page, a target that is itself a redirect, and an `#anchor` the target does not have all fail the build. A link in the content to an old address is not dead, since it still works.
 
 ## Articles
