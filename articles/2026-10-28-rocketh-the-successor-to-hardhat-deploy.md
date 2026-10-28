@@ -1,6 +1,10 @@
 ---
 title: 'rocketh, the successor to hardhat-deploy'
 date: 2026-10-28
+# Held back until the release it announces: a build leaves a draft out,
+# and the articles page says "Coming soon." meanwhile. Remove this line
+# (and set the date to the publication day) to publish.
+draft: true
 description: 'What rocketh is, what stays the same for a hardhat-deploy v1 project, what changed and why, and how to migrate.'
 ---
 

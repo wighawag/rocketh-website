@@ -1,6 +1,6 @@
 <script lang="ts">
 	import RssIcon from '@lucide/svelte/icons/rss';
-	import {articles} from '$lib/core/docs/navigation';
+	import {articles, emptyArticles} from '$lib/core/docs/navigation';
 	import type {DocModule, DocsManifest} from '$lib/core/docs/types';
 	import DocContent from './DocContent.svelte';
 	import {formatDate} from './format';
@@ -16,6 +16,7 @@
 	let {manifest, doc, link, feed}: Props = $props();
 
 	let list = $derived(articles(manifest));
+	let empty = $derived(emptyArticles(manifest));
 </script>
 
 <div class="mx-auto max-w-3xl px-4 py-12 sm:px-8">
@@ -36,6 +37,12 @@
 						>{formatDate(article.date)}</time
 					>
 				{/if}
+				{#if article.draft}
+					<span
+						class="ml-2 rounded border px-1.5 py-0.5 text-xs text-muted-foreground"
+						data-testid="draft-badge">Draft</span
+					>
+				{/if}
 				<h2 class="mt-1 text-xl font-semibold tracking-tight">
 					<a href={link(article.route)} class="hover:underline"
 						>{article.title}</a
@@ -46,7 +53,9 @@
 				{/if}
 			</li>
 		{:else}
-			<li class="py-6 text-muted-foreground">No articles yet.</li>
+			<li class="py-6 text-muted-foreground" data-testid="articles-empty">
+				{empty === 'coming-soon' ? 'Coming soon.' : 'No articles yet.'}
+			</li>
 		{/each}
 	</ul>
 </div>
