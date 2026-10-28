@@ -28,7 +28,9 @@ export default {
 		{dir: 'articles', label: 'Articles'},
 	],
 
-	// Dated pages with a list and a feed (`/feed.xml`).
+	// Dated pages with a list and a feed (`/feed.xml`): the `articles` folder
+	// of contentDir. `{dir: 'articles', contentDir: '../articles', editLink}`
+	// takes them from a folder of their own instead (see the README).
 	articles: 'articles',
 
 	// Old addresses that must keep working, each forwarded to where its page

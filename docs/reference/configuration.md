@@ -10,7 +10,7 @@
 | `base`       | `/`                | Where the content is mounted in the site.                                 |
 | `publicDir`  | `public`           | A folder of `contentDir` served as-is at `base`.                          |
 | `sections`   | every folder       | The header nav: `{dir, label}` in order.                                  |
-| `articles`   | none               | The folder of dated articles, with a list page and `/feed.xml`.           |
+| `articles`   | none               | The folder of dated articles, with a list page and `/feed.xml`. `{dir, contentDir}` takes them from a folder of their own. |
 | `editLink`   | none               | `{repo, branch, dir, text}` for the "edit this page" link.                |
 | `codeThemes` | GitHub light/dark  | The two Shiki themes.                                                     |
 | `navFile`    | `_sidebar.yaml`    | The file name of a section's explicit sidebar.                            |

@@ -7,7 +7,11 @@
  */
 import {existsSync, globSync, readFileSync, statSync} from 'node:fs';
 import {join, posix, relative, sep} from 'node:path';
-import {normaliseBase, type ResolvedDocsConfig} from './config.js';
+import {
+	normaliseBase,
+	type EditLinkConfig,
+	type ResolvedDocsConfig,
+} from './config.js';
 import type {
 	DocModule,
 	DocsManifest,
@@ -66,6 +70,35 @@ function stringOr(value: unknown, fallback: string): string {
 	return typeof value === 'string' && value.trim() ? value.trim() : fallback;
 }
 
+/** `file` relative to `root`, in posix form, or null when it is outside. */
+function within(root: string, file: string): string | null {
+	const rel = toPosix(relative(root, file));
+	if (rel.startsWith('..') || rel.startsWith('/')) return null;
+	return rel;
+}
+
+/** The `.md` files of a folder matching the globs, folder-relative. */
+function markdownFiles(
+	root: string,
+	include: string[],
+	exclude: string[],
+): string[] {
+	return globSync(include, {cwd: root, exclude})
+		.map(toPosix)
+		.filter((p) => /\.md$/i.test(p))
+		.filter((p) => statSync(join(root, p)).isFile());
+}
+
+/** An `editLink` setting as the manifest holds it: a `{path}` pattern. */
+function editLinkOf(editLink: EditLinkConfig | null): DocsManifest['editLink'] {
+	if (!editLink) return null;
+	const dir = editLink.dir ? `${editLink.dir.replace(/^\/|\/$/g, '')}/` : '';
+	return {
+		pattern: `${editLink.repo.replace(/\/$/, '')}/edit/${editLink.branch ?? 'main'}/${dir}{path}`,
+		text: editLink.text ?? 'Edit this page on GitHub',
+	};
+}
+
 export class DocsSite {
 	readonly config: ResolvedDocsConfig;
 	readonly mode: Mode;
@@ -89,11 +122,45 @@ export class DocsSite {
 		this.mode = mode;
 	}
 
-	/** Content-relative path of an absolute file, or null if outside. */
+	/**
+	 * Content-relative path of an absolute file, or null if outside.
+	 *
+	 * Articles from a folder of their own (`articles.contentDir`) are given the
+	 * source they would have as the content directory's `<dir>/` folder:
+	 * `<dir>/hello.md`. Everything keyed by source (routes, sections, links,
+	 * the article layout) then treats them like any other article, and
+	 * `fileOf` is the one place that knows where they really are.
+	 */
 	sourceOf(file: string): string | null {
-		const rel = toPosix(relative(this.config.contentRoot, file));
-		if (rel.startsWith('..') || rel.startsWith('/')) return null;
+		const {contentRoot, articlesSource: articles} = this.config;
+		const rel = within(contentRoot, file);
+		if (!articles?.root) return rel;
+		const own = within(articles.root, file);
+		// When one folder holds the other, a file belongs to the deeper one.
+		if (
+			own !== null &&
+			(rel === null || articles.root.length > contentRoot.length)
+		) {
+			return own ? `${articles.dir}/${own}` : null;
+		}
+		// The content directory's own `<dir>/` folder is not read when the
+		// articles come from elsewhere.
+		if (rel === null || this.isArticleSource(rel)) return null;
 		return rel;
+	}
+
+	/** Absolute path of a content-relative source, the inverse of `sourceOf`. */
+	fileOf(source: string): string {
+		const articles = this.config.articlesSource;
+		if (articles?.root && this.isArticleSource(source)) {
+			return join(articles.root, source.slice(articles.dir.length + 1));
+		}
+		return join(this.config.contentRoot, source);
+	}
+
+	private isArticleSource(source: string): boolean {
+		const dir = this.config.articlesSource?.dir;
+		return !!dir && source.startsWith(`${dir}/`);
 	}
 
 	/** Whether an absolute path is one of the pages. */
@@ -120,20 +187,27 @@ export class DocsSite {
 
 	/** Content-relative paths of every page file, sorted. */
 	scan(): string[] {
-		const {contentRoot, include, exclude, publicDir} = this.config;
+		const {contentRoot, include, exclude, publicDir, articlesSource} =
+			this.config;
 		if (!existsSync(contentRoot)) {
 			throw new Error(`docs: content folder not found: ${contentRoot}`);
 		}
 		const always = ['**/node_modules', '**/.*'];
 		if (publicDir) always.push(publicDir);
-		return globSync(include, {
-			cwd: contentRoot,
-			exclude: [...always, ...exclude],
-		})
-			.map(toPosix)
-			.filter((p) => /\.md$/i.test(p))
-			.filter((p) => statSync(join(contentRoot, p)).isFile())
-			.sort();
+		const pages = markdownFiles(contentRoot, include, [...always, ...exclude]);
+		if (!articlesSource?.root) return pages.sort();
+		const {dir, root} = articlesSource;
+		if (!existsSync(root)) {
+			throw new Error(`docs: articles folder not found: ${root}`);
+		}
+		// The articles' folder may hold the content directory, or the other way
+		// round: each file is read from one place only, the one `sourceOf` says.
+		return [
+			...pages.filter((p) => this.sourceOf(join(contentRoot, p)) === p),
+			...markdownFiles(root, articlesSource.include, always)
+				.map((p) => `${dir}/${p}`)
+				.filter((s) => this.sourceOf(this.fileOf(s)) === s),
+		].sort();
 	}
 
 	/** Folders the dev server must watch: the static prefix of each include. */
@@ -148,6 +222,9 @@ export class DocsSite {
 			roots.add(join(this.config.contentRoot, ...prefix));
 		}
 		if (this.config.publicRoot) roots.add(this.config.publicRoot);
+		if (this.config.articlesSource?.root) {
+			roots.add(this.config.articlesSource.root);
+		}
 		if (this.config.redirectsFile) {
 			roots.add(join(this.config.contentRoot, this.config.redirectsFile));
 		}
@@ -433,7 +510,7 @@ export class DocsSite {
 	 */
 	private isDraft(source: string): boolean {
 		try {
-			const text = readFileSync(join(this.config.contentRoot, source), 'utf8');
+			const text = readFileSync(this.fileOf(source), 'utf8');
 			return splitFrontmatter(text).data.draft === true;
 		} catch {
 			return false;
@@ -447,6 +524,7 @@ export class DocsSite {
 			source,
 			base,
 			contentRoot,
+			fileOf: (s: string) => this.fileOf(s),
 			routeOfSource: (s: string) => this.sources.get(s) ?? null,
 			isRoute: (p: string) => this.routeSet.has(p),
 			isPublicFile: (p: string) => {
@@ -458,7 +536,7 @@ export class DocsSite {
 	}
 
 	private async renderEntry(source: string, route: string): Promise<Entry> {
-		const file = join(this.config.contentRoot, source);
+		const file = this.fileOf(source);
 		const text = readFileSync(file, 'utf8');
 		let result: RenderResult;
 		try {
@@ -617,7 +695,7 @@ export class DocsSite {
 		if (this.cachedManifest) return this.cachedManifest;
 		this.problems = [];
 		const pages = this.pages().map((e) => e.meta);
-		const {articles, base, editLink} = this.config;
+		const {articles, articlesSource, base, editLink} = this.config;
 
 		const dirs = new Set(
 			pages.map((p) => p.section).filter((s): s is string => !!s),
@@ -655,12 +733,11 @@ export class DocsSite {
 			pages,
 			sections,
 			articles: articles ? posix.join(base, articles, '/') : null,
-			editLink: editLink
+			editLink: editLinkOf(editLink),
+			articlesFolder: articlesSource?.root
 				? {
-						pattern: `${editLink.repo.replace(/\/$/, '')}/edit/${editLink.branch ?? 'main'}/${
-							editLink.dir ? `${editLink.dir.replace(/^\/|\/$/g, '')}/` : ''
-						}{path}`,
-						text: editLink.text ?? 'Edit this page on GitHub',
+						dir: articlesSource.dir,
+						editLink: editLinkOf(articlesSource.editLink),
 					}
 				: null,
 			redirects: Object.fromEntries(this.redirectMap),
