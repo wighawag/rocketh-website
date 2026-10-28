@@ -39,7 +39,7 @@ Everything about the content is in `web/docs.config.js`. Every field is optional
 | `base`          | `/`               | Where the content is mounted in the site. `/docs/` puts `guide/intro.md` at `/docs/guide/intro/`.            |
 | `publicDir`     | `public`          | A folder of `contentDir` served as-is at `base` (logos, images), like VitePress's `public`.                  |
 | `sections`      | every folder      | The header nav, in order: `[{dir, label}]`. Each top-level folder is a section with its own sidebar.         |
-| `articles`      | none              | The top-level folder of dated articles. It gets a list page and an RSS feed at `/feed.xml`.                  |
+| `articles`      | none              | The top-level folder of dated articles, with a list page and an RSS feed at `/feed.xml`. Or `{dir, contentDir, include, editLink}` for articles in a folder of their own. See [Articles](#articles). |
 | `editLink`      | none              | `{repo, branch, dir, text}`: "edit this page" links to `<repo>/edit/<branch>/<dir>/<file>`.                  |
 | `codeThemes`    | GitHub light/dark | The two Shiki themes.                                                                                        |
 | `navFile`       | `_sidebar.yaml`   | The file name of a section's explicit sidebar.                                                               |
@@ -138,7 +138,35 @@ redirects: {
 
 ## Articles
 
-With `articles: 'articles'`, every page in `docs/articles/` other than its `index.md` is an article: it has its own layout and is listed newest first by its `date` frontmatter at `/articles/` (under that folder's `index.md`, if it has one). Articles with a `date` are also in the RSS feed at `/feed.xml`; give every article one. Absolute URLs in the feed come from `canonicalURL` in `web/src/web-config.json`.
+With `articles: 'articles'`, every page in `docs/articles/` other than its `index.md` is an article: it has its own layout and is listed newest first by its `date` frontmatter at `/articles/` (under that folder's `index.md`, if it has one). Articles with a `date` are also in the RSS feed at `/feed.xml`; give every article one. Absolute URLs in the feed come from `canonicalURL` in `web/src/web-config.json`. To show the list in the header, name the folder in `sections` too (`{dir: 'articles', label: 'Articles'}`); the home page can link to `/articles/` like to any page.
+
+### Articles in a folder of their own
+
+Docs describe code and change with it, so they often live in the code's repository; articles are dated pieces about the project and may belong to the site instead. The object form takes them from any folder:
+
+```js
+export default {
+	contentDir: '../../my-project', // the docs, in another repository
+	articles: {
+		dir: 'articles', // where they are in the site: /articles/
+		contentDir: '../articles', // where they are on disk, relative to this file
+		editLink: {repo: 'https://github.com/owner/my-site', dir: 'articles'},
+	},
+	sections: [
+		{dir: 'documentation', label: 'Documentation'},
+		{dir: 'articles', label: 'Articles'},
+	],
+};
+```
+
+| Field        | Default       | Meaning                                                                                                                            |
+| ------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `dir`        | required      | The folder name the articles are mounted at, under `base`. `articles: 'news'` is the same as `articles: {dir: 'news'}`.          |
+| `contentDir` | none          | Their folder, relative to the config file. Without it, they are the `dir` folder of the content directory.                       |
+| `include`    | `['**/*.md']` | Globs of the articles, relative to their `contentDir`.                                                                             |
+| `editLink`   | none          | `{repo, branch, dir, text}` like the site's `editLink`, `dir` being the folder's path in `repo`. None by default: the site's own points at the docs' repository. |
+
+The folder is mounted as if it were the content directory's `<dir>/` folder (which is then left out, if it exists), so everything works as for articles that live with the docs: the article layout, the list, the feed, search, drafts, images next to an article, and link checking. Links work both ways, site-absolute or relative: an article in that folder links to a page as `/guide/install/` or `../guide/install.md#setup`, and a page links to it as `/articles/hello/`. A dead link or a missing anchor in an article fails the build with the article's path, as `articles/hello.md`. Under `vite dev` the folder is watched and served like the content.
 
 ## Embeds
 
