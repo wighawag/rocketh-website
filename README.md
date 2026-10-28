@@ -55,7 +55,7 @@ The sidebar order is the content's: a `_sidebar.yaml` in each section folder of 
 
 Every page the previous VitePress site served still answers at its address: as the page, or as a forwarding page to where it moved. When rocketh moves a page, the redirect goes in rocketh's `_redirects.yaml` (the template's `redirectsFile`), in the same commit as the move, so no state of rocketh's `main` has a page without its old address or a redirect without its page. `redirects` in `web/docs.config.js` holds only what is not about the content: `/introduction/`, where VitePress published the repository README, forwards to that README on GitHub. See "Redirects" in the template's README for the format, anchors included.
 
-The end-to-end suite (`web/e2e/tests/rocketh.e2e.ts`) checks every one of those addresses, and reads the sidebars and the redirects from the rocketh checkout rather than restating them, so it passes against rocketh's `main` across a restructure of its pages.
+The end-to-end suite (`web/e2e/tests/rocketh.e2e.ts`) checks every one of those addresses without restating where any of them leads: it reads the sidebars from the `_sidebar.yaml` files of the rocketh checkout, and follows each forwarding page of the build to the page it lands on (it does not read `_redirects.yaml`), so it passes against rocketh's `main` across a restructure of its pages.
 
 ## The engine
 

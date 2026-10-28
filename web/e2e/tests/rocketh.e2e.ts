@@ -16,9 +16,10 @@ import {PLAIN_URL} from '../ports';
  *
  * The content moves under this suite: a page can become a forwarding page
  * (rocketh's `_redirects.yaml`), and the sidebars are rocketh's
- * `_sidebar.yaml` files. So the suite reads both from the checkout it was
- * built against rather than restating them, and it passes on rocketh's main
- * before and after a restructure of its pages.
+ * `_sidebar.yaml` files. So the suite restates neither: it reads the sidebars
+ * from the checkout it was built against, and follows each forwarding page of
+ * the build to the page it lands on, so it passes on rocketh's main before and
+ * after a restructure of its pages.
  */
 
 const url = (path: string) => `${PLAIN_URL}${path}`;
