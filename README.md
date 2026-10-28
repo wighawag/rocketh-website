@@ -31,22 +31,21 @@ From `web/`: `pnpm check`, `pnpm test`, `pnpm format:check`, and `pnpm test:e2e`
 
 Everything about the content is in `web/docs.config.js`. Every field is optional:
 
-| Field        | Default           | Meaning                                                                                                    |
-| ------------ | ----------------- | ---------------------------------------------------------------------------------------------------------- |
-| `contentDir` | `../docs`         | The Markdown folder, relative to the config file. It can be anywhere on disk.                              |
-| `include`    | `['**/*.md']`     | Globs of the pages, relative to `contentDir`.                                                              |
-| `exclude`    | `[]`              | Globs to leave out. `node_modules`, dot folders and `publicDir` are always left out.                       |
-| `base`       | `/`               | Where the content is mounted in the site. `/docs/` puts `guide/intro.md` at `/docs/guide/intro/`.          |
-| `publicDir`  | `public`          | A folder of `contentDir` served as-is at `base` (logos, images), like VitePress's `public`.                 |
-| `sections`   | every folder      | The header nav, in order: `[{dir, label}]`. Each top-level folder is a section with its own sidebar.      |
-| `articles`   | none              | The top-level folder of dated articles. It gets a list page and an RSS feed at `/feed.xml`.               |
-| `editLink`   | none              | `{repo, branch, dir, text}`: "edit this page" links to `<repo>/edit/<branch>/<dir>/<file>`.               |
-| `codeThemes` | GitHub light/dark | The two Shiki themes.                                                                                      |
-| `navFile`    | `_sidebar.yaml`   | The file name of a section's explicit sidebar.                                                             |
-| `redirects`  | none              | Old addresses forwarded to their new page, see [Redirects](#redirects).                                    |
-| `redirectsFile` | `_redirects.yaml` | A YAML file of `contentDir` holding more redirects, read when it exists, see [Redirects](#redirects).   |
-| `socialLinks` | none             | Links at the right of the header: `[{icon: 'github', link, label}]`. `github` is drawn; others show `label`. |
-| `redirects`  | none              | Old addresses that keep working: `{'/old/path/': '/new/path/'}`. See [Redirects](#redirects).             |
+| Field           | Default           | Meaning                                                                                                      |
+| --------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `contentDir`    | `../docs`         | The Markdown folder, relative to the config file. It can be anywhere on disk.                                |
+| `include`       | `['**/*.md']`     | Globs of the pages, relative to `contentDir`.                                                                |
+| `exclude`       | `[]`              | Globs to leave out. `node_modules`, dot folders and `publicDir` are always left out.                         |
+| `base`          | `/`               | Where the content is mounted in the site. `/docs/` puts `guide/intro.md` at `/docs/guide/intro/`.            |
+| `publicDir`     | `public`          | A folder of `contentDir` served as-is at `base` (logos, images), like VitePress's `public`.                  |
+| `sections`      | every folder      | The header nav, in order: `[{dir, label}]`. Each top-level folder is a section with its own sidebar.         |
+| `articles`      | none              | The top-level folder of dated articles. It gets a list page and an RSS feed at `/feed.xml`.                  |
+| `editLink`      | none              | `{repo, branch, dir, text}`: "edit this page" links to `<repo>/edit/<branch>/<dir>/<file>`.                  |
+| `codeThemes`    | GitHub light/dark | The two Shiki themes.                                                                                        |
+| `navFile`       | `_sidebar.yaml`   | The file name of a section's explicit sidebar.                                                               |
+| `redirects`     | none              | Old addresses forwarded to their new page: `{'/old/path/': '/new/path/'}`. See [Redirects](#redirects).      |
+| `redirectsFile` | `_redirects.yaml` | A YAML file of `contentDir` holding more redirects, read when it exists. See [Redirects](#redirects).        |
+| `socialLinks`   | none              | Links at the right of the header: `[{icon: 'github', link, label}]`. `github` is drawn; others show `label`. |
 
 The site's name, description and canonical URL (used by the feed and the social cards) are in `web/src/web-config.json`.
 
