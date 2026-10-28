@@ -1,5 +1,5 @@
 import {test, expect, devices} from '@playwright/test';
-import {readFileSync} from 'node:fs';
+import {readdirSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {parse as parseYaml} from 'yaml';
 import {loadDocsConfig} from '../../docs-engine/config.js';
@@ -24,7 +24,7 @@ import {PLAIN_URL} from '../ports';
 
 const url = (path: string) => `${PLAIN_URL}${path}`;
 
-const {contentRoot} = await loadDocsConfig();
+const {contentRoot, articlesSource} = await loadDocsConfig();
 
 type NavItem = {text: string; link?: string; items?: NavItem[]};
 
@@ -168,22 +168,56 @@ test('the home page links into both sections and to GitHub', async ({page}) => {
 	await expect(page.locator('h1')).toHaveText('Introduction');
 });
 
+/**
+ * The articles of THIS repository (`articles` in docs.config.js), split into
+ * what a build publishes and the drafts it leaves out, read from the files so
+ * the suite follows the content as articles are added or published.
+ */
+function articleFiles(): {published: string[]; drafts: string[]} {
+	const root = articlesSource?.root;
+	if (!root) throw new Error('docs.config.js has no articles folder');
+	const out = {published: [] as string[], drafts: [] as string[]};
+	for (const name of readdirSync(root)) {
+		if (!name.endsWith('.md') || name === 'index.md') continue;
+		const text = readFileSync(join(root, name), 'utf8');
+		const fm = text.match(/^---\n([\s\S]*?)\n---/);
+		const data = (fm ? parseYaml(fm[1]) : {}) as {draft?: unknown};
+		(data?.draft === true ? out.drafts : out.published).push(
+			name.replace(/\.md$/, ''),
+		);
+	}
+	return out;
+}
+
 test("lists this repository's articles, edits them here, and feeds them", async ({
 	page,
 	request,
 }) => {
+	const {published, drafts} = articleFiles();
+
 	// From the header, as a reader finds them.
 	await page.goto(url('/documentation/'));
 	await hydrated(page);
 	await page.getByRole('link', {name: 'Articles', exact: true}).first().click();
 	await expect(page).toHaveURL(url('/articles/'));
 	const list = page.getByTestId('article-list').getByRole('heading');
-	const count = await list.count();
-	expect(count).toBeGreaterThan(0);
+	await expect(list).toHaveCount(published.length);
 
-	// Every article is in the feed, at its own address.
+	// Every published article is in the feed; no draft is, nor is it served.
 	const feed = await (await request.get(url('/feed.xml'))).text();
-	expect(feed.match(/<item>/g)).toHaveLength(count);
+	expect(feed.match(/<item>/g) ?? []).toHaveLength(published.length);
+	for (const draft of drafts) {
+		expect(feed).not.toContain(`/articles/${draft}/`);
+		expect((await request.get(url(`/articles/${draft}/`))).status()).toBe(404);
+	}
+
+	if (published.length === 0) {
+		// Nothing published yet: the list says whether something is coming.
+		await expect(page.getByTestId('articles-empty')).toHaveText(
+			drafts.length ? 'Coming soon.' : 'No articles yet.',
+		);
+		return;
+	}
 
 	// An article comes from articles/ in THIS repository, so its edit link
 	// points here, not at rocketh.
