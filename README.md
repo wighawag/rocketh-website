@@ -138,7 +138,7 @@ redirects: {
 
 ## Articles
 
-With `articles: 'articles'`, every page in `docs/articles/` other than its `index.md` is an article: it has its own layout and is listed newest first by its `date` frontmatter at `/articles/` (under that folder's `index.md`, if it has one). Articles with a `date` are also in the RSS feed at `/feed.xml`; give every article one. Absolute URLs in the feed come from `canonicalURL` in `web/src/web-config.json`. To show the list in the header, name the folder in `sections` too (`{dir: 'articles', label: 'Articles'}`); the home page can link to `/articles/` like to any page.
+With `articles: 'articles'`, every page in `docs/articles/` other than its `index.md` is an article: it has its own layout and is listed newest first by its `date` frontmatter at `/articles/` (under that folder's `index.md`, if it has one). Articles with a `date` are also in the RSS feed at `/feed.xml`; give every article one. An article with `draft: true` stays in the repository and is left out of a build (the list, the feed, search); the dev server lists it with a "Draft" mark. When a build has no article to list, the list page says "Coming soon." if some are drafts, and "No articles yet." if there are none, so an articles section can go live before its first article. Absolute URLs in the feed come from `canonicalURL` in `web/src/web-config.json`. To show the list in the header, name the folder in `sections` too (`{dir: 'articles', label: 'Articles'}`); the home page can link to `/articles/` like to any page.
 
 ### Articles in a folder of their own
 

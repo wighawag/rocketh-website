@@ -116,6 +116,8 @@ export class DocsSite {
 	private redirectProblems: {source: string; message: string}[] = [];
 	problems: Problem[] = [];
 	private cachedManifest: DocsManifest | null = null;
+	/** Articles left out of this build because they are drafts. */
+	private pendingArticles = 0;
 
 	constructor(config: ResolvedDocsConfig, mode: Mode) {
 		this.config = config;
@@ -235,11 +237,16 @@ export class DocsSite {
 	async load(): Promise<void> {
 		this.sources.clear();
 		const routes = new Map<string, string>();
+		this.pendingArticles = 0;
 		for (const source of this.scan()) {
 			// Drafts are left out of a build BEFORE anything is rendered, so a
 			// link to one is a dead link like any other, reported with its file
-			// and line rather than discovered by the prerender crawl.
-			if (this.mode === 'build' && this.isDraft(source)) continue;
+			// and line rather than discovered by the prerender crawl. A draft
+			// ARTICLE is still counted, so the list can say one is coming.
+			if (this.mode === 'build' && this.isDraft(source)) {
+				if (this.isArticle(source)) this.pendingArticles++;
+				continue;
+			}
 			const route = posix.join(this.config.base, routePathOf(source), '/');
 			const existing = routes.get(route);
 			if (existing) {
@@ -503,6 +510,12 @@ export class DocsSite {
 		return problems;
 	}
 
+	/** Whether a source is an article: in the articles folder, not its index. */
+	private isArticle(source: string): boolean {
+		const dir = this.config.articles;
+		return !!dir && source.startsWith(`${dir}/`) && routePathOf(source) !== dir;
+	}
+
 	/**
 	 * Whether a page is a draft (`draft: true`): shown by the dev server,
 	 * absent from a build. Unreadable frontmatter is not a draft; rendering
@@ -552,10 +565,7 @@ export class DocsSite {
 		this.resolveFrontmatterLinks(result, source, route);
 		const fm = result.frontmatter;
 		const section = source.includes('/') ? source.split('/')[0] : null;
-		const isArticle =
-			!!this.config.articles &&
-			section === this.config.articles &&
-			routePathOf(source) !== this.config.articles;
+		const isArticle = this.isArticle(source);
 		const layout = LAYOUTS.includes(fm.layout as Layout)
 			? (fm.layout as Layout)
 			: isArticle
@@ -581,6 +591,8 @@ export class DocsSite {
 			image: typeof fm.image === 'string' ? fm.image : null,
 			toc: fm.toc !== false,
 			editLink: fm.editLink !== false,
+			// Only ever true under the dev server: a build leaves drafts out.
+			draft: fm.draft === true,
 		};
 		return {source, file, route, text, result, meta};
 	}
@@ -734,6 +746,7 @@ export class DocsSite {
 			sections,
 			articles: articles ? posix.join(base, articles, '/') : null,
 			editLink: editLinkOf(editLink),
+			pendingArticles: this.pendingArticles,
 			articlesFolder: articlesSource?.root
 				? {
 						dir: articlesSource.dir,
