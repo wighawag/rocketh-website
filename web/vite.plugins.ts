@@ -1,6 +1,6 @@
 import type {Plugin, PluginOption} from 'vite';
 import tailwindcss from '@tailwindcss/vite';
-import {existsSync} from 'node:fs';
+import {existsSync, readdirSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {docs} from './docs-engine/vite-plugin.js';
 import {loadDocsConfig} from './docs-engine/config.js';
@@ -44,6 +44,66 @@ function rockethPlayground(): Plugin {
 					`rocketh-playground: ${element} does not exist. Build it in the rocketh checkout first: \`pnpm i && pnpm docs:widgets\`.`,
 				);
 			}
+		},
+	};
+}
+
+/**
+ * The rocketh agent skills, served raw at `/skills/<name>/SKILL.md` and
+ * `/skills/<name>/references/<file>.md`, from the `skills/` folder of the
+ * rocketh checkout the content comes from. An agent reads these files as they
+ * are, so they are copied byte for byte, never rendered as pages (they are not
+ * in `include` in docs.config.js).
+ *
+ * In a build they are emitted as assets of the client build, which
+ * adapter-static copies into `build/` unchanged; GitHub Pages then serves a
+ * `.md` file as `text/markdown; charset=utf-8`. The dev server serves them
+ * with that type too. A rocketh checkout without `skills/` serves nothing.
+ */
+export function skillFiles(skillsRoot: string): string[] {
+	if (!existsSync(skillsRoot)) return [];
+	const files: string[] = [];
+	for (const skill of readdirSync(skillsRoot, {withFileTypes: true})) {
+		if (!skill.isDirectory()) continue;
+		const dir = join(skillsRoot, skill.name);
+		if (existsSync(join(dir, 'SKILL.md'))) files.push(`${skill.name}/SKILL.md`);
+		const references = join(dir, 'references');
+		if (!existsSync(references)) continue;
+		for (const file of readdirSync(references).sort()) {
+			if (file.endsWith('.md')) files.push(`${skill.name}/references/${file}`);
+		}
+	}
+	return files.sort();
+}
+
+function rockethSkills(): Plugin {
+	let skillsRoot = '';
+	return {
+		name: 'rocketh-skills',
+		async configResolved() {
+			const {contentRoot} = await loadDocsConfig();
+			skillsRoot = join(contentRoot, 'skills');
+		},
+		generateBundle() {
+			if (this.environment.config.consumer !== 'client') return;
+			for (const file of skillFiles(skillsRoot)) {
+				this.emitFile({
+					type: 'asset',
+					fileName: `skills/${file}`,
+					source: readFileSync(join(skillsRoot, file)),
+				});
+			}
+		},
+		configureServer(server) {
+			server.middlewares.use('/skills/', (req, res, next) => {
+				const file = decodeURIComponent((req.url ?? '').split('?')[0]).replace(
+					/^\/+/,
+					'',
+				);
+				if (!skillFiles(skillsRoot).includes(file)) return next();
+				res.setHeader('content-type', 'text/markdown; charset=utf-8');
+				res.end(readFileSync(join(skillsRoot, file)));
+			});
 		},
 	};
 }
@@ -110,5 +170,5 @@ export function extraPlugins(): PluginOption[] {
 	// `vite.config.ts` guarantees and what Tailwind's own SvelteKit
 	// instructions require. If that ever needs to change, it changes there,
 	// for everyone, rather than here.
-	return [docs(), rockethPlayground(), tailwindcss()];
+	return [docs(), rockethPlayground(), rockethSkills(), tailwindcss()];
 }

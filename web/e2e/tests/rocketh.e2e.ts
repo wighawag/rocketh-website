@@ -152,6 +152,31 @@ test('serves every address the previous site served', async ({request}) => {
 	);
 });
 
+test('serves the agent skills raw, from the checkout', async ({request}) => {
+	const skillsRoot = join(contentRoot, 'skills');
+	const files: string[] = [];
+	for (const skill of readdirSync(skillsRoot)) {
+		files.push(`${skill}/SKILL.md`);
+		const references = join(skillsRoot, skill, 'references');
+		try {
+			for (const file of readdirSync(references))
+				files.push(`${skill}/references/${file}`);
+		} catch {
+			// a skill without references
+		}
+	}
+	expect(files).toContain('rocketh-deploy/SKILL.md');
+	expect(files).toContain('rocketh-safe-owned-changes/SKILL.md');
+	for (const file of files) {
+		const response = await request.get(url(`/skills/${file}`));
+		expect(response.status(), file).toBe(200);
+		// byte for byte: an agent reads the file itself, not a page made from it
+		expect(await response.text(), file).toBe(
+			readFileSync(join(skillsRoot, file), 'utf8'),
+		);
+	}
+});
+
 test('the home page links into both sections and to GitHub', async ({page}) => {
 	await page.goto(url('/'));
 	await expect(page).toHaveTitle('rocketh');
@@ -272,7 +297,29 @@ test('renders ::: containers', async ({page, request}) => {
 	await expect(page.locator('.callout-warning').first()).toContainText(
 		'Three built-in proxy names changed',
 	);
-	await page.goto(url('/documentation/unknown-signers/'));
+	// whichever page of the checkout has one: pages move, the container stays
+	const danger = readdirSync(join(contentRoot, 'documentation'), {
+		withFileTypes: true,
+	})
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => entry.name)
+		.find((dir) => {
+			try {
+				return /^::: ?danger/m.test(
+					readFileSync(
+						join(contentRoot, 'documentation', dir, 'index.md'),
+						'utf8',
+					),
+				);
+			} catch {
+				return false;
+			}
+		});
+	expect(
+		danger,
+		'a documentation page with a ::: danger container',
+	).toBeDefined();
+	await page.goto(url(await finalPath(request, `/documentation/${danger}/`)));
 	await expect(page.locator('.callout-danger').first()).toBeVisible();
 });
 
