@@ -1,0 +1,7 @@
+{
+  "stem": "github:wighawag/template-svelte-docs",
+  "branches": {
+    "main": {}
+  },
+  "verify": ": \"${ROCKETH_DIR:?set ROCKETH_DIR to an installed rocketh checkout with pnpm docs:widgets built}\" && pnpm install && pnpm --filter ./web format:check && pnpm verify"
+}
