@@ -6,12 +6,18 @@
 # deploy would publish. `workflow_dispatch` takes another rocketh ref, to check
 # the site against a rocketh branch that is not merged yet.
 #
+# It also runs on every push to `main`, because template merges
+# (offshoot-fanout) land there directly rather than through a pull request.
+# A push run has no inputs, so it builds against rocketh's `main`.
+#
 # Deployment is NOT here: rocketh.dev is GitHub Pages of the rocketh
 # repository, and its deploy workflow pins the commit of this one it builds.
 
 name: verify
 
 on:
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
