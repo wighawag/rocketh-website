@@ -18,18 +18,22 @@
 #
 # FORMAT. One file per line: its path, then its reason. `#` starts a comment.
 # A line `[<branch>]` starts a section; this repo has one node, `main`, so it
-# has none: every entry is what template-svelte-shadcn `main` modifies from
-# template-svelte-tailwind `main`. A child REPO never keeps these entries: its
+# has none: every entry is what rocketh-website `main` modifies from
+# template-svelte-docs `main`. A child REPO never keeps these entries: its
 # list is its own, written against this repo, and until it writes one it
 # carries this file unchanged and the check says it has none.
 
 # The workspace
-pnpm-lock.yaml                                         the lockfile with shadcn's dependencies added (bits-ui, vaul-svelte, mode-watcher, sonner, ...)
-web/package.json                                       shadcn-svelte's dependencies: bits-ui, vaul-svelte, lucide, mode-watcher, sonner and the class helpers
-web/svelte.config.js                                   the `$ui` alias, which kit paints the building blocks of core/ui
+.offshoot-omissions          this site's own list: the template's sample content, its sample embeds and the e2e suite that drives them
+AGENTS.md                    the template's rules, then this site's: the content is rocketh's, the playground is never an npm release, the checks need `ROCKETH_DIR`
+README.md                    rocketh.dev's README, with what is specific to this site
+package.json                 the workspace's name, and its AGPL-3.0 license
+pnpm-lock.yaml               the lockfile with fflate added
+web/package.json             fflate, which packs a code block's files into its "open in playground" link
 
-# The kit
-web/src/app.css                                        shadcn's theme tokens and dark variant, tw-animate, the forms plugin dropped, the overlay layers' z-index scale
-web/src/routes/+layout.svelte                          the mode watcher, and the overlay layers rendered from core/ui/layers with the notices and the progress bar in theirs
-web/src/lib/core/notifications/NotificationCard.svelte the notification card painted on shadcn's Card and Button
-web/src/lib/components/NavigationProgress.svelte       no z-index of its own: it renders inside the "progress" overlay layer, which decides what it covers
+# The site
+web/docs.config.js           the content: the rocketh checkout's Markdown (`ROCKETH_DIR`, else `../rocketh`)
+web/vite.plugins.ts          the rocketh playground taken from that checkout's build and rocketh's skills emitted into the build, beside the docs engine and Tailwind
+web/src/lib/embeds/index.ts  `<rocketh-playground>`, the site's one embed, in place of the template's samples
+web/src/web-config.json      rocketh.dev's name, description, URL and colours
+web/static/icon.png          rocketh.dev's icon
