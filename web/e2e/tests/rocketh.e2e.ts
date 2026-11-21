@@ -11,6 +11,7 @@ import {
 	decodeOverlay,
 	projectValueOf,
 } from '../../test/open-in-playground/decode-overlay';
+import {STAND_IN_BASES} from '../../test/open-in-playground/helpers';
 import {PLAIN_URL} from '../ports';
 
 /**
@@ -363,9 +364,11 @@ test('opens a marked sample in the playground', async ({page, request}) => {
 		.evaluateAll((links) => links.map((a) => (a as HTMLAnchorElement).href));
 	const opened = hrefs
 		.filter((href) => href.startsWith('https://play.rocketh.dev/#project=2.'))
-		.map((href) => decodeOverlay(projectValueOf(href)!, {}))
+		.map((href) => decodeOverlay(projectValueOf(href)!, STAND_IN_BASES))
 		.find((project) => project.select === path);
 	expect(opened, `a link on ${route} selecting ${path}`).toBeDefined();
+	// over the bare base (`STAND_IN_BASES.bare` is empty): exactly the
+	// example's files, no Counter sample beside them
 	expect(opened!.files).toEqual(
 		readExample(join(contentRoot, EXAMPLES_DIR, example)),
 	);

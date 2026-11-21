@@ -1,0 +1,10 @@
+{
+	"about": "The shared test vector of a bare `2.` link (web/src/lib/playground/project/overlay-link.ts): the files and `select` of overlay-link-vector.json with `base: \"bare\"`, so the link opens over the starting project without its Counter sample (`bareProject()` in template.ts). rocketh-website hand-ports the encoder (web/open-in-playground/overlay-link.js) and keeps a copy of the decoder in its tests, both held to this file and to overlay-link-vector.json: encodeOverlay(files, select, {base: \"bare\"}) must give exactly `value`. A change to the encoding changes these files and both repositories together.",
+	"files": {
+		"deploy/02_deploy_greeter.ts": "import {deployScript, artifacts} from '../rocketh/deploy.js';\n\nexport default deployScript(\n\tasync ({deploy, namedAccounts}) => {\n\t\tconst {deployer} = namedAccounts;\n\n\t\tawait deploy('Greeter', {\n\t\t\taccount: deployer,\n\t\t\tartifact: artifacts.Greeter,\n\t\t\targs: ['hello'],\n\t\t});\n\t},\n\t{tags: ['Greeter', 'Greeter_deploy']},\n);\n",
+		"contracts/Greeter.sol": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\n/// Says hello, in any language: \"héllo\", \"你好\", \"👋\".\ncontract Greeter {\n  string public greeting;\n\n  constructor(string memory initial) {\n    greeting = initial;\n  }\n\n  function setGreeting(string calldata next) external {\n    greeting = next;\n  }\n}\n"
+	},
+	"select": "deploy/02_deploy_greeter.ts",
+	"base": "bare",
+	"value": "2.fVJNitVAEL5K0Zu8B5lkmNUQGUEQZEBBGBeCGYeeTiWvtdMduis4IeQErjyBblx4iFl5Fd17BKvzM28WIoR0deqr76v6KqO4lQFFwYdHkYpaGwyiGIVylrxUFPIXHpHQZ8EZxuU5XL1-_vbkpVZoA55cVmhJ1xp9Aa8u35S287JpJTBaV5oGeH-anWdn509KW9o8VsshwAGNcSloC9IOYKRtetlgAaU4_PzBqVKkHP-6__b7-_0S__n65XMpstJujcHaF4ylBQjktW2g62-NVtDEFN9nUQAu4XyvyPndCmyxdX7gBjRpafYLCTwUwsWWYgqAaeGpe6tIOwsBaVZn5EaopDGVJAkW72gP_EJvpfkHcQRsrPyw6RV2xg356dnNEt3MaLaceBVCt53zBOOSu1Jed5SC9Ox63M8EtXctJFmWe6c-Ih3yBZl9CMlsAN7NBBXWsjfxPPLsOE8yDFbBbhVIwcoWq2dKud4y_R4unsYpSippNnLrBP0Up3kMnuUiUH6SelPaJeumknTjYcBSUawY9OlDZh2sOI6YrQSPME0o4F0y_0bJ9fp92kd9mubrSHLBHMW3cHU5uY7IWCOmVAQ0qIjt_t8ypr8"
+}

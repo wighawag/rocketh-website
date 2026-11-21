@@ -2,7 +2,9 @@
  * The playground's reading of a `2.` link value, copied from
  * rocketh-playground's `web/src/lib/playground/project/share-link.ts`
  * (`decodeOverlay` and what it uses), so the tests here open a link the way
- * the playground does. Only the tests use it: the site writes links, it never
+ * the playground does, over the base the link names. A test passes its own
+ * stand-in `bases`, different from each other, so the files a link opens
+ * show which base it named. Only the tests use it: the site writes links, it never
  * reads them.
  */
 import {inflateSync, strFromU8} from 'fflate';
@@ -16,6 +18,16 @@ export class ShareLinkError extends Error {
 	constructor(message: string) {
 		super(message);
 		this.name = 'ShareLinkError';
+	}
+}
+
+/** A `2.` link the playground cannot read because it was written for a newer one. */
+export class NewerLinkError extends ShareLinkError {
+	constructor() {
+		super(
+			'it needs a newer version of the playground than this one; reload the page to open it',
+		);
+		this.name = 'NewerLinkError';
 	}
 }
 
@@ -79,26 +91,38 @@ function projectFiles(content: unknown, empty: boolean): ProjectFiles {
 
 export type LinkedProject = {files: ProjectFiles; select?: string};
 
+/** The bases a `2.` link may name; without one, it opens over the starting project. */
+const OVERLAY_BASES = ['bare'];
+
+/** What a `2.` value's files go over: `starting` without `base`, `bare` with `"base": "bare"`. */
+export type LinkBases = {starting: ProjectFiles; bare: ProjectFiles};
+
+/** The keys a `2.` payload may hold. */
+const OVERLAY_KEYS = ['base', 'files', 'select'];
+
 /**
- * What a `2.` value opens: `base` (the starting project) with the value's
- * files over it, and its `select`, which must name one of the resulting files.
+ * What a `2.` value opens: its base (`bases.starting`, or `bases.bare` for
+ * `"base": "bare"`) with the value's files over it, and its `select`, which
+ * must name one of the resulting files. Throws a `ShareLinkError` saying why
+ * it cannot: a `NewerLinkError` for a key or a `base` the playground does not
+ * know.
  */
-export function decodeOverlay(
-	value: string,
-	base: ProjectFiles,
-): LinkedProject {
+export function decodeOverlay(value: string, bases: LinkBases): LinkedProject {
 	if (!value.startsWith(OVERLAY_VERSION))
 		throw new ShareLinkError('it is not a project link of this playground');
 	const content = inflateJSON(value.slice(OVERLAY_VERSION.length));
 	if (!isObject(content) || !('files' in content))
 		throw new ShareLinkError('it holds no project files');
-	const unknown = Object.keys(content).filter(
-		(key) => key !== 'files' && key !== 'select',
-	);
-	if (unknown.length > 0)
+	const {base: name} = content;
+	if (name !== undefined && typeof name !== 'string')
 		throw new ShareLinkError(
-			`it holds ${unknown.map((k) => JSON.stringify(k)).join(', ')}, which this playground does not read`,
+			`its base is ${JSON.stringify(name)}, which is not a base's name`,
 		);
+	if (Object.keys(content).some((key) => !OVERLAY_KEYS.includes(key)))
+		throw new NewerLinkError();
+	if (name !== undefined && !OVERLAY_BASES.includes(name))
+		throw new NewerLinkError();
+	const base = name === 'bare' ? bases.bare : bases.starting;
 	const files = {...base, ...projectFiles(content.files, true)};
 	const {select} = content;
 	if (select === undefined) return {files};

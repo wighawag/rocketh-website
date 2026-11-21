@@ -12,8 +12,11 @@
  * it (rocketh's `examples/playground/README.md` says what an example holds,
  * and rocketh's own tests check that the sample equals the file). At build
  * time every file of the example is read and encoded, with the named file to
- * select, in the playground's `2.` encoding (`overlay-link.js`), so the link
- * opens the playground's starting project with the example's files over it.
+ * select, in the playground's `2.` encoding (`overlay-link.js`) with
+ * `base: 'bare'`, so the link opens the example's files over the playground's
+ * starting project without its Counter sample (`contracts/Counter.sol` and
+ * `deploy/01_deploy_counter.ts`): the reader sees the example, not the
+ * example beside a Counter it does not use.
  *
  * A marker naming an example or a file that does not exist, or an example
  * whose link would be over the playground's 32 KB cap, throws: the engine
@@ -101,7 +104,7 @@ export function openInPlayground(rockethDir) {
 		}
 		let value;
 		try {
-			value = encodeOverlay(files, path);
+			value = encodeOverlay(files, path, {base: 'bare'});
 		} catch (error) {
 			throw new Error(
 				`${word}: ${error instanceof Error ? error.message : String(error)}`,
