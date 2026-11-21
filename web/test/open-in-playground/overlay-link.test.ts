@@ -1,9 +1,10 @@
 /**
- * The port of the playground's `2.` encoder (`open-in-playground/overlay-link.js`)
- * and the test copy of its decoder (`decode-overlay.ts`) against the
- * playground's shared test vectors, copied here as they are from
- * rocketh-playground's `web/test/lib/playground/`: `overlay-link-vector.json`
- * (no base) and `overlay-link-bare-vector.json` (`base: "bare"`).
+ * The port of the playground's `2.` encoder
+ * (`open-in-playground/overlay-link.js`) and the test copy of its decoder
+ * (`decode-overlay.ts`) against the playground's shared test vectors, copied
+ * here as they are from rocketh-playground's `web/test/lib/playground/`:
+ * `overlay-link-vector.json` (no base) and `overlay-link-bare-vector.json`
+ * (`base: "bare"`).
  */
 import {describe, it, expect} from 'vitest';
 import {readFileSync} from 'node:fs';

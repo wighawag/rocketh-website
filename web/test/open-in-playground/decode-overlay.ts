@@ -4,8 +4,8 @@
  * (`decodeOverlay` and what it uses), so the tests here open a link the way
  * the playground does, over the base the link names. A test passes its own
  * stand-in `bases`, different from each other, so the files a link opens
- * show which base it named. Only the tests use it: the site writes links, it never
- * reads them.
+ * show which base it named. Only the tests use it: the site writes links, it
+ * never reads them.
  */
 import {inflateSync, strFromU8} from 'fflate';
 
