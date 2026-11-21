@@ -283,16 +283,44 @@ html {
 	opacity: 0;
 	transition: opacity 150ms;
 }
+/* A site's `codeBlockAction` link, beside Copy and styled like it. */
+.docs-content .code-actions {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 1;
+	display: flex;
+	gap: 0.35rem;
+}
+.docs-content .code-actions .code-copy {
+	position: static;
+}
+.docs-content .code-action {
+	padding: 0.35rem 0.6rem;
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) - 4px);
+	background: var(--background);
+	font-size: 0.75rem;
+	line-height: 1;
+	font-weight: inherit;
+	color: var(--muted-foreground);
+	text-decoration: none;
+	opacity: 0;
+	transition: opacity 150ms;
+}
 .docs-content .code-block:hover .code-copy,
 .docs-content .code-copy:focus-visible,
-.docs-content .code-copy[data-copied] {
+.docs-content .code-copy[data-copied],
+.docs-content .code-block:hover .code-action,
+.docs-content .code-action:focus-visible {
 	opacity: 1;
 }
 .docs-content .code-block:hover .code-lang {
 	opacity: 0;
 }
 @media (hover: none) {
-	.docs-content .code-copy {
+	.docs-content .code-copy,
+	.docs-content .code-action {
 		opacity: 1;
 	}
 	.docs-content .code-lang {

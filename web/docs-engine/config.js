@@ -64,6 +64,33 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  */
 
 /**
+ * @typedef {object} CodeBlock A fenced code block, as `codeBlockAction` sees it.
+ * @property {string | null} lang The language of the fence as written
+ *   (` ```ts ` gives `ts`), null when it has none.
+ * @property {string | null} meta The rest of the info string, after the
+ *   language (` ```ts [label] run=1 ` gives `[label] run=1`), null when empty.
+ * @property {string} source The code, without its final line break.
+ * @property {{source: string, route: string}} page The page the block is on:
+ *   its content-relative file (`guide/install.md`) and its route
+ *   (`/guide/install/`).
+ */
+
+/**
+ * @typedef {object} CodeBlockAction A link shown in a code block's header,
+ *   beside the Copy button.
+ * @property {string} label The link's text.
+ * @property {string} href Where it goes: an http(s) URL, or a link written as
+ *   in the content (site-absolute, relative, a Markdown file), which is
+ *   rewritten and checked like any other link of the page.
+ */
+
+/**
+ * @callback CodeBlockActionHook
+ * @param {CodeBlock} block
+ * @returns {CodeBlockAction | null | undefined | void}
+ */
+
+/**
  * @typedef {object} DocsConfig
  * @property {string} [contentDir] The Markdown folder, relative to the config
  *   file. It may live anywhere: `../docs`, a sibling package, the root of
@@ -102,6 +129,12 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
  *   that moving a page and forwarding its old address can happen in one change
  *   to the content. Defaults to `_redirects.yaml`; read when it exists. A key
  *   listed both there and in `redirects` fails the build.
+ * @property {CodeBlockActionHook | null} [codeBlockAction] Called for every
+ *   fenced code block when its page is rendered. A returned action is shown
+ *   as a link beside the block's Copy button; nothing returned leaves the
+ *   block as it is. A function that throws, or returns something that is not
+ *   an action, fails the build with the page and the block's line, like a
+ *   dead link. None by default.
  */
 
 /**
@@ -131,6 +164,7 @@ export const DEFAULTS = Object.freeze({
 	redirects: {},
 	redirectsFile: '_redirects.yaml',
 	socialLinks: [],
+	codeBlockAction: null,
 });
 
 const here = dirname(fileURLToPath(import.meta.url));

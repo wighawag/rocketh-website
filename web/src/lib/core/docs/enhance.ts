@@ -57,7 +57,8 @@ function selectTab(button: HTMLElement): void {
 }
 
 async function copyCode(button: HTMLElement): Promise<void> {
-	const code = button.parentElement?.querySelector('pre')?.textContent ?? '';
+	const code =
+		button.closest('.code-block')?.querySelector('pre')?.textContent ?? '';
 	try {
 		await navigator.clipboard.writeText(code);
 		button.textContent = 'Copied';
