@@ -17,6 +17,7 @@
 // The playground widget is built from the same checkout (see vite.plugins.ts).
 
 import {resolve} from 'node:path';
+import {openInPlayground} from './open-in-playground/code-block-action.js';
 
 const rockethDir = process.env.ROCKETH_DIR
 	? resolve(process.cwd(), process.env.ROCKETH_DIR)
@@ -79,4 +80,10 @@ export default {
 		branch: 'main',
 		dir: '',
 	},
+
+	// "Open in playground" on a sample marked `playground=<example>/<path>`,
+	// opening that example of the checkout's `examples/playground/` in
+	// play.rocketh.dev (see open-in-playground/code-block-action.js).
+	// `rockethDir` is relative to this file, as `contentDir` is.
+	codeBlockAction: openInPlayground(resolve(import.meta.dirname, rockethDir)),
 };

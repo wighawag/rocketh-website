@@ -1,8 +1,16 @@
 import {test, expect, devices} from '@playwright/test';
 import {readdirSync, readFileSync} from 'node:fs';
-import {join} from 'node:path';
+import {join, sep} from 'node:path';
 import {parse as parseYaml} from 'yaml';
 import {loadDocsConfig} from '../../docs-engine/config.js';
+import {
+	EXAMPLES_DIR,
+	readExample,
+} from '../../open-in-playground/code-block-action.js';
+import {
+	decodeOverlay,
+	projectValueOf,
+} from '../../test/open-in-playground/decode-overlay';
 import {PLAIN_URL} from '../ports';
 
 /**
@@ -321,6 +329,46 @@ test('renders ::: containers', async ({page, request}) => {
 	).toBeDefined();
 	await page.goto(url(await finalPath(request, `/documentation/${danger}/`)));
 	await expect(page.locator('.callout-danger').first()).toBeVisible();
+});
+
+test('opens a marked sample in the playground', async ({page, request}) => {
+	// whichever page of the checkout has one: the first fence marked
+	// `playground=<example>/<path>` (open-in-playground/code-block-action.js)
+	const marked = ['index.md', 'documentation', 'hardhat-deploy']
+		.flatMap((path) =>
+			path.endsWith('.md')
+				? [path]
+				: readdirSync(join(contentRoot, path), {recursive: true})
+						.map(String)
+						.filter((file) => file.endsWith('.md'))
+						.map((file) => `${path}/${file.split(sep).join('/')}`),
+		)
+		.sort()
+		.map((source) => ({
+			source,
+			target: readFileSync(join(contentRoot, source), 'utf8').match(
+				/^ {0,3}(?:`{3,}|~{3,})[^\n]*\splayground=(\S+)/m,
+			)?.[1],
+		}))
+		.find((page) => page.target);
+	expect(marked, 'a page with a sample marked playground=').toBeDefined();
+	const {source, target} = marked as {source: string; target: string};
+	const [example, ...rest] = target.split('/');
+	const path = rest.join('/');
+	const route = `/${source.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '/')}`;
+
+	await page.goto(url(await finalPath(request, route)));
+	const hrefs = await page
+		.getByRole('link', {name: 'Open in playground'})
+		.evaluateAll((links) => links.map((a) => (a as HTMLAnchorElement).href));
+	const opened = hrefs
+		.filter((href) => href.startsWith('https://play.rocketh.dev/#project=2.'))
+		.map((href) => decodeOverlay(projectValueOf(href)!, {}))
+		.find((project) => project.select === path);
+	expect(opened, `a link on ${route} selecting ${path}`).toBeDefined();
+	expect(opened!.files).toEqual(
+		readExample(join(contentRoot, EXAMPLES_DIR, example)),
+	);
 });
 
 test('searches the whole site', async ({page}) => {
