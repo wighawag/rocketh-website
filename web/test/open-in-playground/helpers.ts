@@ -10,3 +10,17 @@ export function incompressible(chars: number): string {
 	}
 	return text;
 }
+
+/**
+ * Stand-ins for the playground's two bases, for `decodeOverlay`: the starting
+ * project holds a Counter sample and the bare one is empty, so a link that
+ * names `base: "bare"` opens exactly its own files, and one that does not
+ * opens them beside the Counter.
+ */
+export const STAND_IN_BASES = {
+	starting: {
+		'contracts/Counter.sol': 'contract Counter {}\n',
+		'deploy/01_deploy_counter.ts': '// deploy the Counter\n',
+	},
+	bare: {},
+};

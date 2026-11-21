@@ -1,8 +1,8 @@
 /**
  * The "Open in playground" link (`open-in-playground/code-block-action.js`),
  * on a stand-in rocketh checkout: a marked fence gets a link that opens, as
- * the playground reads it, exactly the example's files with the named file
- * selected; an unmarked fence renders as without the hook; a marker the
+ * the playground reads it, exactly the example's files over the bare base
+ * (no Counter sample) with the named file selected; an unmarked fence renders as without the hook; a marker the
  * checkout cannot back fails the build with the page and the line.
  */
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
@@ -17,8 +17,9 @@ import {
 	openInPlayground,
 	PLAYGROUND_URL,
 } from '../../open-in-playground/code-block-action.js';
+import {encodeOverlay} from '../../open-in-playground/overlay-link.js';
 import {decodeOverlay, projectValueOf} from './decode-overlay';
-import {incompressible} from './helpers';
+import {incompressible, STAND_IN_BASES} from './helpers';
 
 const EXAMPLE = {
 	'contracts/GreetingsRegistry.sol': 'contract GreetingsRegistry {}\n',
@@ -68,7 +69,7 @@ const actionHrefs = (html: string) =>
 		.map((m) => m[1]);
 
 describe('openInPlayground', () => {
-	it('links a marked fence to the example, its named file selected', async () => {
+	it('links a marked fence to the example over the bare base, its named file selected', async () => {
 		const r = await render(
 			'# T\n\n```typescript playground=greetings/deploy/001_deploy_greetings_registry.ts\n// deploy it\n```\n',
 			true,
@@ -79,10 +80,15 @@ describe('openInPlayground', () => {
 		expect(href.startsWith(`${PLAYGROUND_URL}#project=2.`)).toBe(true);
 		const value = projectValueOf(href);
 		expect(value).not.toBeNull();
-		expect(decodeOverlay(value!, {})).toEqual({
+		expect(decodeOverlay(value!, STAND_IN_BASES)).toEqual({
 			files: EXAMPLE,
 			select: 'deploy/001_deploy_greetings_registry.ts',
 		});
+		expect(value).toBe(
+			encodeOverlay(EXAMPLE, 'deploy/001_deploy_greetings_registry.ts', {
+				base: 'bare',
+			}),
+		);
 	});
 
 	it('finds the marker among other words of the info string', async () => {
@@ -91,7 +97,7 @@ describe('openInPlayground', () => {
 			true,
 		);
 		const [href] = actionHrefs(r.html);
-		expect(decodeOverlay(projectValueOf(href)!, {}).select).toBe(
+		expect(decodeOverlay(projectValueOf(href)!, STAND_IN_BASES).select).toBe(
 			'contracts/GreetingsRegistry.sol',
 		);
 	});
