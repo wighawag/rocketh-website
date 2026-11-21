@@ -9,6 +9,7 @@
 	import { cn, type WithoutChildrenOrChild } from "$lib/shadcn/utils.js";
 	import SheetOverlay from "./sheet-overlay.svelte";
 	import SheetPortal from "./sheet-portal.svelte";
+	import { DRAWER_LAYER } from "$lib/core/ui/layers";
 	import type { Snippet } from "svelte";
 	import type { ComponentProps } from "svelte";
 
@@ -28,7 +29,13 @@
 	} = $props();
 </script>
 
-<SheetPortal {...portalProps}>
+<!-- KEEP THE `to` DEFAULT IF YOU REGENERATE THIS FILE from the shadcn CLI.
+	 Content owns the portal, so this is the only place a sheet's layer can be
+	 decided for every call site. A sheet is a drawer (chrome sliding in from an
+	 edge, which a dialog it opens must cover), so it takes the drawer's layer.
+	 Passed BEFORE the spread so a caller can still override `to`. See
+	 lib/core/ui/layers.ts. -->
+<SheetPortal to={DRAWER_LAYER} {...portalProps}>
 	<SheetOverlay />
 	<SheetPrimitive.Content
 		bind:ref
