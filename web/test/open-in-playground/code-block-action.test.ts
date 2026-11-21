@@ -2,8 +2,9 @@
  * The "Open in playground" link (`open-in-playground/code-block-action.js`),
  * on a stand-in rocketh checkout: a marked fence gets a link that opens, as
  * the playground reads it, exactly the example's files over the bare base
- * (no Counter sample) with the named file selected; an unmarked fence renders as without the hook; a marker the
- * checkout cannot back fails the build with the page and the line.
+ * (no Counter sample) with the named file selected; an unmarked fence renders
+ * as without the hook; a marker the checkout cannot back fails the build with
+ * the page and the line.
  */
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
