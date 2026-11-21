@@ -556,6 +556,7 @@ export class DocsSite {
 			result = await renderMarkdown(text, {
 				themes: this.config.codeThemes,
 				links: this.linkContext(source, route),
+				codeBlockAction: this.config.codeBlockAction,
 			});
 		} catch (error) {
 			throw new Error(
@@ -813,6 +814,13 @@ export class DocsSite {
 		for (const entry of this.entries.values()) {
 			for (const warning of entry.result.warnings) {
 				problems.push({source: entry.source, line: null, message: warning});
+			}
+			for (const error of entry.result.codeBlockActionErrors) {
+				problems.push({
+					source: entry.source,
+					line: error.line,
+					message: error.message,
+				});
 			}
 			for (const link of entry.result.links) {
 				if (link.dead) {

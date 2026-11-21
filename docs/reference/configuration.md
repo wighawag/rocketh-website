@@ -17,5 +17,6 @@
 | `socialLinks` | none              | `[{icon: 'github', link}]`: links at the right of the header.             |
 | `redirects`  | none               | `{'/old/path/': '/new/path/'}`: old addresses forwarded to their new page. |
 | `redirectsFile` | `_redirects.yaml` | A YAML file of `contentDir` with more redirects, read when it exists.  |
+| `codeBlockAction` | none            | A function called for every fenced code block with `{lang, meta, source, page}`; a returned `{label, href}` is a link beside its Copy button. |
 
 Set `DOCS_CONFIG=path/to/other.config.js` to build with another config file without editing this one.

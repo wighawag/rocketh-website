@@ -46,6 +46,7 @@ Everything about the content is in `web/docs.config.js`. Every field is optional
 | `redirects`     | none              | Old addresses forwarded to their new page: `{'/old/path/': '/new/path/'}`. See [Redirects](#redirects).      |
 | `redirectsFile` | `_redirects.yaml` | A YAML file of `contentDir` holding more redirects, read when it exists. See [Redirects](#redirects).        |
 | `socialLinks`   | none              | Links at the right of the header: `[{icon: 'github', link, label}]`. `github` is drawn; others show `label`. |
+| `codeBlockAction` | none            | A function called for every fenced code block, returning a link to show beside its Copy button, or nothing. See [Code block actions](#code-block-actions). |
 
 The site's name, description and canonical URL (used by the feed and the social cards) are in `web/src/web-config.json`.
 
@@ -103,6 +104,30 @@ The home page fields follow VitePress's `layout: home` shape, so a VitePress hom
 ### Raw HTML, and why it is allowed
 
 HTML in a page is rendered as written. That is how a custom element gets into a page, and it is not sanitised. **The assumption is that the content is trusted: written by the site's authors and reviewed like the source code, because it is compiled into the site like the source code.** Nothing here renders Markdown from users at runtime. A descendant that builds pages from content it does not control (contributions merged without review, content fetched from elsewhere) must add `rehype-sanitize` to the pipeline in `web/docs-engine/markdown/render.ts`, and accept that embeds and custom elements then need an allow-list.
+
+### Code block actions
+
+A site can add a link to a code block's header, beside the Copy button: "Run this", "Open in playground", "Open in StackBlitz". `codeBlockAction` in `web/docs.config.js` is called for every fenced code block when its page is rendered, with:
+
+- `lang`: the fence's language as written (` ```ts ` gives `ts`), or `null`;
+- `meta`: the rest of the info string (` ```ts [label] playground=a/b.ts ` gives `[label] playground=a/b.ts`), or `null`;
+- `source`: the code, without its final line break;
+- `page`: `{source, route}`, the page's file relative to `contentDir` and its address.
+
+It returns `{label, href}` to show a link with that text, or nothing to leave the block as it is. The info string is where a page says which blocks get one:
+
+```js
+export default {
+	codeBlockAction({lang, meta, source, page}) {
+		const name = meta?.match(/(?:^|\s)playground=(\S+)/)?.[1];
+		if (!name) return;
+		// playgroundLink: the site's own code, building the URL.
+		return {label: 'Open in playground', href: playgroundLink(name, source)};
+	},
+};
+```
+
+The link is styled like Copy and left out of the search index as Copy is. An http(s) URL opens in a new tab; any other link is resolved and checked like a link written in the page, so a dead one fails the build. A function that throws, or returns something that is not two non-empty strings, fails the build with the page and the line of the block, as a dead link does (a warning under `vite dev`). It runs in Node while the pages are rendered, so it may read files. Without `codeBlockAction`, code blocks render exactly as they do without the option.
 
 ## Navigation
 

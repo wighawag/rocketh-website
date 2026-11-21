@@ -17,6 +17,7 @@ import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
 import rehypeStringify from 'rehype-stringify';
 import type {Heading} from '../../src/lib/core/docs/types.js';
+import type {CodeBlockActionHook} from '../config.js';
 import type {CodeThemes} from './highlight.js';
 import {normaliseContainers} from './prepass.js';
 import {
@@ -32,6 +33,7 @@ import {
 	highlightCode,
 	rewriteLinks,
 	type AssetImport,
+	type CodeBlockActionError,
 	type LinkOptions,
 	type LinkRecord,
 } from './rehype.js';
@@ -79,6 +81,8 @@ export type RenderResult = {
 	ids: string[];
 	assets: AssetImport[];
 	warnings: string[];
+	/** Code blocks the site's `codeBlockAction` failed on, by source line. */
+	codeBlockActionErrors: CodeBlockActionError[];
 };
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
@@ -106,6 +110,8 @@ const stringifier = unified().use(rehypeStringify);
 export type RenderOptions = {
 	themes: CodeThemes;
 	links: LinkOptions;
+	/** The site's `codeBlockAction`, asked about every fenced code block. */
+	codeBlockAction?: CodeBlockActionHook | null;
 };
 
 export async function renderMarkdown(
@@ -129,7 +135,20 @@ export async function renderMarkdown(
 	const htmlTree = (await toHtmlTree.run(mdast as any)) as unknown as AnyNode;
 	dropTableWhitespace(htmlTree);
 	const hast = (await parseRawHtml.run(htmlTree as any)) as unknown as AnyNode;
-	await highlightCode(hast, options.themes);
+	const actionErrors = await highlightCode(
+		hast,
+		options.themes,
+		options.codeBlockAction
+			? {
+					hook: options.codeBlockAction,
+					page: {source: options.links.source, route: options.links.route},
+				}
+			: undefined,
+	);
+	const codeBlockActionErrors = actionErrors.map((e) => ({
+		...e,
+		line: sourceLine(e.line),
+	}));
 	codeGroups(hast);
 	const rewritten = rewriteLinks(hast, options.links);
 	const links = rewritten.links.map((l) => ({...l, line: sourceLine(l.line)}));
@@ -160,5 +179,6 @@ export async function renderMarkdown(
 		ids,
 		assets,
 		warnings,
+		codeBlockActionErrors,
 	};
 }

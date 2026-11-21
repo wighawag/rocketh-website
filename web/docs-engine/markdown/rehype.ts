@@ -4,6 +4,11 @@
  */
 import {existsSync, statSync} from 'node:fs';
 import {join, posix} from 'node:path';
+import type {
+	CodeBlock,
+	CodeBlockAction,
+	CodeBlockActionHook,
+} from '../config.js';
 import {highlight, type CodeThemes} from './highlight.js';
 import {relativeUrl, resolveLink, type LinkContext} from './links.js';
 import {
@@ -21,6 +26,58 @@ function labelOf(meta: string | undefined): string | null {
 	return meta?.match(/\[([^\]]+)\]/)?.[1] ?? null;
 }
 
+export type CodeBlockActions = {
+	hook: CodeBlockActionHook;
+	page: CodeBlock['page'];
+};
+
+/** A `codeBlockAction` that threw or returned something other than an action. */
+export type CodeBlockActionError = {line: number | null; message: string};
+
+function isAction(value: unknown): value is CodeBlockAction {
+	const action = value as CodeBlockAction | null;
+	return (
+		typeof action === 'object' &&
+		action !== null &&
+		typeof action.label === 'string' &&
+		action.label !== '' &&
+		typeof action.href === 'string' &&
+		action.href !== ''
+	);
+}
+
+/**
+ * The site's `codeBlockAction` for one block: the action to show, or null
+ * when there is none or the hook failed (then `errors` says why).
+ */
+function actionFor(
+	actions: CodeBlockActions,
+	block: Omit<CodeBlock, 'page'>,
+	line: number | null,
+	errors: CodeBlockActionError[],
+): CodeBlockAction | null {
+	let value: unknown;
+	try {
+		value = actions.hook({...block, page: {...actions.page}});
+	} catch (error) {
+		errors.push({
+			line,
+			message: `codeBlockAction threw: ${error instanceof Error ? error.message : String(error)}`,
+		});
+		return null;
+	}
+	if (value === undefined || value === null) return null;
+	if (!isAction(value)) {
+		errors.push({
+			line,
+			message:
+				'codeBlockAction must return nothing or `{label, href}` with two non-empty strings',
+		});
+		return null;
+	}
+	return {label: value.label, href: value.href};
+}
+
 /**
  * Every fenced code block becomes:
  *
@@ -31,12 +88,19 @@ function labelOf(meta: string | undefined): string | null {
  *
  * The copy button is in the HTML from the start (so it costs no layout shift)
  * and is wired by one delegated listener on the client.
+ *
+ * With `actions`, the site's `codeBlockAction` is asked about each block, and
+ * the action it returns becomes a link beside the copy button, the two in a
+ * `div.code-actions`. The link carries the block's position, so `rewriteLinks`
+ * resolves and checks it like any link of the page.
  */
 export async function highlightCode(
 	tree: AnyNode,
 	themes: CodeThemes,
-): Promise<void> {
+	actions?: CodeBlockActions,
+): Promise<CodeBlockActionError[]> {
 	const jobs: Promise<void>[] = [];
+	const errors: CodeBlockActionError[] = [];
 	walk(tree, (node, parent, index) => {
 		if (!parent || !isElement(node, 'pre')) return;
 		const code = node.children?.find((c) => isElement(c, 'code'));
@@ -50,6 +114,42 @@ export async function highlightCode(
 				: undefined;
 		const label = labelOf(meta);
 		const source = textOf(code).replace(/\n$/, '');
+		const action = actions
+			? actionFor(
+					actions,
+					{lang: lang ?? null, meta: meta || null, source},
+					node.position?.start.line ?? null,
+					errors,
+				)
+			: null;
+		const copy = h(
+			'button',
+			{
+				type: 'button',
+				className: ['code-copy'],
+				dataCopy: '',
+				ariaLabel: 'Copy code',
+				dataPagefindIgnore: '',
+			},
+			[text('Copy')],
+		);
+		const header = action
+			? h('div', {className: ['code-actions'], dataPagefindIgnore: ''}, [
+					{
+						...h(
+							'a',
+							{
+								className: ['code-action'],
+								href: action.href,
+								dataPagefindIgnore: '',
+							},
+							[text(action.label)],
+						),
+						position: node.position,
+					},
+					copy,
+				])
+			: copy;
 		jobs.push(
 			highlight(source, lang, themes).then((pre) => {
 				parent.children![index] = h(
@@ -60,17 +160,7 @@ export async function highlightCode(
 						...(label ? {dataLabel: label} : {}),
 					},
 					[
-						h(
-							'button',
-							{
-								type: 'button',
-								className: ['code-copy'],
-								dataCopy: '',
-								ariaLabel: 'Copy code',
-								dataPagefindIgnore: '',
-							},
-							[text('Copy')],
-						),
+						header,
 						h(
 							'span',
 							{
@@ -88,6 +178,7 @@ export async function highlightCode(
 		return 'skip';
 	});
 	await Promise.all(jobs);
+	return errors;
 }
 
 /**
