@@ -1,0 +1,9 @@
+{
+	"about": "The shared test vector of the `2.` link encoding (web/src/lib/playground/project/overlay-link.ts). rocketh-website keeps a copy of the encoder held to this file: encodeOverlay(files, select) must give exactly `value`. A change to the encoding changes this file and both repositories together.",
+	"files": {
+		"deploy/02_deploy_greeter.ts": "import {deployScript, artifacts} from '../rocketh/deploy.js';\n\nexport default deployScript(\n\tasync ({deploy, namedAccounts}) => {\n\t\tconst {deployer} = namedAccounts;\n\n\t\tawait deploy('Greeter', {\n\t\t\taccount: deployer,\n\t\t\tartifact: artifacts.Greeter,\n\t\t\targs: ['hello'],\n\t\t});\n\t},\n\t{tags: ['Greeter', 'Greeter_deploy']},\n);\n",
+		"contracts/Greeter.sol": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\n/// Says hello, in any language: \"héllo\", \"你好\", \"👋\".\ncontract Greeter {\n  string public greeting;\n\n  constructor(string memory initial) {\n    greeting = initial;\n  }\n\n  function setGreeting(string calldata next) external {\n    greeting = next;\n  }\n}\n"
+	},
+	"select": "deploy/02_deploy_greeter.ts",
+	"value": "2.fVLNitUwFH6VQza9FzrtMKuhMoIgyICCMC4EMw4xPe2NpklJTnFK6RO48gl048KHmJWvonsfwaRN585CBkp70u8733d-MrFGafSsmpi0hpyQ5MsXDpHQFd5qVrGyhKvXz9-evFQSjceTyxoNqUahq-DV5RtueifaTkBgq1rRCO9Pi_Pi7PwJN9yUMVuMHg6otc1BGRBmBC1MO4gWK-Ds8OtngDjLQ_z77vufH3dr_Pfb1y-cFdxshUGqCyZuADw5ZVrohw9aSWgjFM6LKUBICfggybpdInbYWTeGAhQpoferCNwnwsUGBQmAedVpBiNJWQMeaXEPzE1QCq1rQQIM3tIewgudEfo_wpGwqYaH5azGXtuxPD27WaObhR1GTmEVTHW9dQTTil1Jp3rKQbgw9bifGRpnO8iKonRWfkI6lCuz-OizZQB4uwjU2IhBx-9RZxdwEn40EnbJIAcjOqyfSWkHE-T3cPE0dsGJ0zLIrRJ0c-zmIXmxi0TxWajNaZelTWX5phMIa0aVOOjyeyQ1Vh1bLJLAA07rK3iXLdcou07_5330p3k5TiRWztF8C9OUs-vIjDlszplHjZLCuB9bxvwP"
+}
