@@ -2,7 +2,10 @@
 title: 'rocketh, the successor to hardhat-deploy'
 date: 2026-11-24
 description: 'What rocketh is, what stays the same for a hardhat-deploy v1 project, what changed and why, and how to migrate.'
+image: /articles/2026-11-24-rocketh-the-successor-to-hardhat-deploy.png
 ---
+
+![rocketh, the successor to hardhat-deploy](/articles/2026-11-24-rocketh-the-successor-to-hardhat-deploy.png)
 
 Hi everyone, rocketh has matured, and while it is not at 1.0.0 yet, we are confident that its core is robust enough for you to migrate to it. We keep it under 1.0.0 so we can still adjust small things, but the core types are not going to change.
 
@@ -40,7 +43,11 @@ A v1 deploy script receives the Hardhat runtime environment, so it can only run 
 
 ### A whole app in the browser
 
-rocketh's core reads no file and needs no Node API, so the same deploy scripts run in a browser through `@rocketh/web`, with the records kept in memory or in IndexedDB. That makes two kinds of app possible. One deploys from the page through the user's wallet: a tool that deploys contracts for its users, or a dashboard. The other boots an EVM in the tab and deploys your real system on it, so the whole app, contracts included, runs in the browser with no node behind it: an offline mode, a demo, or a game whose world lives on a chain in the tab. Because the real scripts run there, rather than a state dump made at build time, nothing goes stale when the contracts change. [Run deploy scripts in a browser](/documentation/browser/) shows how, and the [playground on the introduction page](/documentation/#try-it-here) is a working example. Many code samples in the documentation also have an "Open in playground" link, which opens the sample as a full project on [play.rocketh.dev](https://play.rocketh.dev), where it compiles and deploys in the tab with nothing to install. Each of those samples is checked in CI against its example project, and every example is deployed against the published release after each release, so what you open is what the page shows.
+rocketh's core reads no file and needs no Node API, so the same deploy scripts run in a browser through `@rocketh/web`, with the records kept in memory or in IndexedDB. That makes two kinds of app possible. One deploys from the page through the user's wallet: a tool that deploys contracts for its users, or a dashboard. The other boots an EVM in the tab and deploys your real system on it, so the whole app, contracts included, runs in the browser with no node behind it: an offline mode, a demo, or a game whose world lives on a chain in the tab. Because the real scripts run there, rather than a state dump made at build time, nothing goes stale when the contracts change. [Run deploy scripts in a browser](/documentation/browser/) shows how, and here is a working example. Press **Start** and this page boots an EVM in your tab and runs four real deploy scripts, one step at a time: a contract deployed behind a proxy, a greeting written, the implementation upgraded, another greeting written. Nothing is simulated and nothing talks to a network; the [introduction page](/documentation/#what-just-happened) explains what each step shows.
+
+<rocketh-playground></rocketh-playground>
+
+Many code samples in the documentation also have an "Open in playground" link, which opens the sample as a full project on [play.rocketh.dev](https://play.rocketh.dev), where it compiles and deploys in the tab with nothing to install, and where you can then read and call the contracts it deployed. Each of those samples is checked in CI against its example project, and every example is deployed against the published release after each release, so what you open is what the page shows.
 
 ### Accounts rocketh cannot sign for
 
@@ -156,7 +163,7 @@ For your own project, [Production hardening](/documentation/production-hardening
 
 ## What comes next
 
-The next piece of work is Foundry. A Foundry project will get what a hardhat-deploy project has today: rocketh reading forge's build output as it is and generating the same typed artifacts, so deploy scripts are type-checked the same way; deploy scripts run as the fixture of `forge test`, on an in-process chain with nothing to start; and deployments read from Solidity by name, with a typed accessor per contract, so a test writes `Counter counter = deployer.Counter();`. A reading path on this site, a demo project and the agent skills will follow for forge users. On the browser side, the playground will be able to interact with the contracts it deployed, not only deploy them.
+The next piece of work is Foundry. A Foundry project will get what a hardhat-deploy project has today: rocketh reading forge's build output as it is and generating the same typed artifacts, so deploy scripts are type-checked the same way; deploy scripts run as the fixture of `forge test`, on an in-process chain with nothing to start; and deployments read from Solidity by name, with a typed accessor per contract, so a test writes `Counter counter = deployer.Counter();`. A reading path on this site, a demo project and the agent skills will follow for forge users.
 
 ## Thanks
 
