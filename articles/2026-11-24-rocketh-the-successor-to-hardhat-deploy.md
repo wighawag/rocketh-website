@@ -47,7 +47,7 @@ rocketh's core reads no file and needs no Node API, so the same deploy scripts r
 
 <rocketh-playground></rocketh-playground>
 
-Many code samples in the documentation also have an "Open in playground" link, which opens the sample as a full project on [play.rocketh.dev](https://play.rocketh.dev), where it compiles and deploys in the tab with nothing to install. Each of those samples is checked in CI against its example project, and every example is deployed against the published release after each release, so what you open is what the page shows.
+Many code samples in the documentation also have an "Open in playground" link, which opens the sample as a full project on [play.rocketh.dev](https://play.rocketh.dev), where it compiles and deploys in the tab with nothing to install, and where you can then read and call the contracts it deployed. Each of those samples is checked in CI against its example project, and every example is deployed against the published release after each release, so what you open is what the page shows.
 
 ### Accounts rocketh cannot sign for
 
@@ -163,7 +163,7 @@ For your own project, [Production hardening](/documentation/production-hardening
 
 ## What comes next
 
-The next piece of work is Foundry. A Foundry project will get what a hardhat-deploy project has today: rocketh reading forge's build output as it is and generating the same typed artifacts, so deploy scripts are type-checked the same way; deploy scripts run as the fixture of `forge test`, on an in-process chain with nothing to start; and deployments read from Solidity by name, with a typed accessor per contract, so a test writes `Counter counter = deployer.Counter();`. A reading path on this site, a demo project and the agent skills will follow for forge users. On the browser side, the playground will be able to interact with the contracts it deployed, not only deploy them.
+The next piece of work is Foundry. A Foundry project will get what a hardhat-deploy project has today: rocketh reading forge's build output as it is and generating the same typed artifacts, so deploy scripts are type-checked the same way; deploy scripts run as the fixture of `forge test`, on an in-process chain with nothing to start; and deployments read from Solidity by name, with a typed accessor per contract, so a test writes `Counter counter = deployer.Counter();`. A reading path on this site, a demo project and the agent skills will follow for forge users.
 
 ## Thanks
 
