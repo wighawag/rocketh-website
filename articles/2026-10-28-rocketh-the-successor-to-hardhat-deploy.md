@@ -8,13 +8,15 @@ draft: true
 description: 'What rocketh is, what stays the same for a hardhat-deploy v1 project, what changed and why, and how to migrate.'
 ---
 
-If you deploy contracts with hardhat-deploy v1, this is about the version that replaces it. hardhat-deploy v2 is built on rocketh, a deployment system that is not tied to Hardhat, and most of what you know from v1 carries over. This article says where rocketh comes from, what it is, what stays the same, what changed and why, how to migrate, and what the design was checked against.
+Hi everyone, rocketh has matured, and while it is not at 1.0.0 yet, we are confident that its core is robust enough for you to migrate to it. We keep it under 1.0.0 so we can still adjust small things, but the core types are not going to change.
+
+This article is for newcomers as well as for those who deploy contracts with hardhat-deploy v1, for whom it is about the version that replaces it. hardhat-deploy v2 is built on rocketh, a deployment system that is not tied to Hardhat, and most of what you know from v1 carries over. This article says where rocketh comes from, what it is, what stays the same, what changed and why, how to migrate, how the tool itself is secured, what the design was checked against, and what comes next.
 
 ## Where it comes from
 
-rocketh is older than hardhat-deploy. Its [first commit](https://github.com/wighawag/rocketh/commit/773e6d4b6334eec6a67511fdb1613d2176ef5c4c), in November 2018, described it as "a simple lib to test ethereum smart contract that allow to use whatever web3 lib and test runner you choose". The same deployment steps ran for tests and for a real deployment, and named accounts were added in March 2019.
+You may not know it, but rocketh is older than hardhat-deploy itself. Its [first commit](https://github.com/wighawag/rocketh/commit/773e6d4b6334eec6a67511fdb1613d2176ef5c4c), in November 2018, described it as "a simple lib to test ethereum smart contract that allow to use whatever web3 lib and test runner you choose". The same deployment steps ran for tests and for a real deployment, and named accounts were added in March 2019.
 
-Buidler, as Hardhat was called then, had no deployment system, and in September 2019 its developers opened an [issue](https://github.com/NomicFoundation/hardhat/issues/381) asking for one as a plugin. Its author pointed to rocketh there a few weeks later, and in March 2020 its approach was rebuilt as a Buidler plugin, buidler-deploy, which became hardhat-deploy when Buidler was renamed. That plugin is the one most people know: it became widely used, and still has about 75,000 downloads a week on npm.
+Buidler, as Hardhat was called then, had no deployment system, and in September 2019 its developers opened an [issue](https://github.com/NomicFoundation/hardhat/issues/381) asking for one as a plugin. I pointed to rocketh there a few weeks later, and in March 2020 its approach was rebuilt as a Buidler plugin, buidler-deploy, which became hardhat-deploy when Buidler was renamed. That plugin is the one most people know: it became widely used, and still has about 75,000 downloads a week on npm.
 
 hardhat-deploy v1 was one package built into Hardhat. Its deploy scripts received the Hardhat runtime environment, and deploying, proxies, diamonds, export and verification shipped together. The field then changed: Foundry arrived, and in the [2024 Solidity Developer Survey](https://www.soliditylang.org/blog/2025/04/25/solidity-developer-survey-2024-results/) 51.1% of respondents used Foundry and 32.9% used Hardhat. A deployment tool that only runs inside one framework leaves out a large part of the people who deploy contracts.
 
@@ -22,13 +24,13 @@ So rocketh was restarted in 2023 as a deployment system that depends on no frame
 
 ## What rocketh is
 
-rocketh is a deployment system for EVM smart contracts. You write deploy scripts, plain TypeScript functions that state what should be deployed and configured; rocketh runs them against a network, records what it deployed, and on the next run does only what differs from the chain. It does not depend on a framework: the same scripts run from the `rocketh` command line in Node, inside your tests, and in a browser.
+rocketh is a deployment system for EVM smart contracts. You write deploy scripts, plain TypeScript functions that state what should be deployed and configured; rocketh runs them against a network, records what it deployed, and on the next run does only what differs from the chain. It does not depend on a framework: the same scripts run from the `rocketh` command line in Node, inside your tests, and **in a browser**.
 
 hardhat-deploy v2 is a thin Hardhat 3 plugin on top of it. It adds the `hardhat deploy` task, typed artifacts generated at each compilation, and helpers to use your deploy scripts as test fixtures and to read networks from the environment. Everything about deploy scripts, accounts, proxies, forks and Safes is rocketh's, which is why the [hardhat-deploy section](/hardhat-deploy/) of this site is short and links into the [shared documentation](/documentation/).
 
 ## What stays the same
 
-Deploy scripts are declarative and idempotent: a script states the result, and a re-run deploys or upgrades only what changed. Accounts are named (`deployer`, `admin`) and resolved per network, including the per-network maps and the `null` entries of v1. Scripts declare `tags` and `dependencies`, and `--tags` selects them. Deployments are recorded as one JSON file per contract per network, in a `deployments/` folder you commit. Proxies (ERC-173, UUPS, transparent with a shared ProxyAdmin), EIP-2535 diamonds and deterministic deployment (create2, and now create3) are declared rather than written by hand. `catchUnknownSigner` is still there and returns v1's `{from, to, value, data}` shape. Deployments are still exported for a frontend (`rocketh-export`) and verified on Etherscan, Sourcify or Blockscout (`rocketh-verify`).
+Deploy scripts are declarative and designed to be idempotent: a script states the result, and a re-run deploys or upgrades only what changed. Accounts are named (`deployer`, `admin`) and resolved per network, including the per-network maps and the `null` entries of v1. Scripts declare `tags` and `dependencies`, and `--tags` selects them. Deployments are recorded as one JSON file per contract per network, in a `deployments/` folder you commit. Proxies (ERC-173, UUPS, transparent with a shared ProxyAdmin), EIP-2535 diamonds and deterministic deployment (create2, and now create3) are declared rather than written by hand. `catchUnknownSigner` is still there and returns v1's `{from, to, value, data}` shape. Deployments are still exported for a frontend (`rocketh-export`) and verified on Etherscan, Sourcify or Blockscout (`rocketh-verify`).
 
 ## What is different, and why
 
@@ -38,11 +40,11 @@ What v1 built into `hre.deployments` is now a set of packages, called extensions
 
 ### Scripts not tied to Hardhat
 
-A v1 deploy script receives the Hardhat runtime environment, so it can only run where Hardhat runs. A rocketh script receives a rocketh environment, built by whichever runtime is driving it: `@rocketh/node` for the command line and tests, `@rocketh/web` in a browser, hardhat-deploy inside Hardhat. Contract compilation is not rocketh's job either: rocketh deploys from artifacts, so a project that compiles with Foundry or solc can use the `rocketh` command line directly ([Get started without Hardhat](/documentation/getting-started/) uses `forge`). A closer integration with Foundry is planned, starting with reading Foundry's artifacts as they are; no date is set.
+A v1 deploy script receives the Hardhat runtime environment, so it can only run where Hardhat runs. A rocketh script receives a rocketh environment, built by whichever runtime is driving it: `@rocketh/node` for the command line and tests, `@rocketh/web` in a browser, hardhat-deploy inside Hardhat. Contract compilation is not rocketh's job either: rocketh deploys from artifacts, so a project that compiles with Foundry or solc can use the `rocketh` command line directly ([Get started without Hardhat](/documentation/getting-started/) uses `forge`). Closer Foundry support is the next piece of work, described in [What comes next](#what-comes-next).
 
 ### A whole app in the browser
 
-rocketh's core reads no file and needs no Node API, so the same deploy scripts run in a browser through `@rocketh/web`, with the records kept in memory or in IndexedDB. That makes two kinds of app possible. One deploys from the page through the user's wallet: a tool that deploys contracts for its users, or a dashboard. The other boots an EVM in the tab and deploys your real system on it, so the whole app, contracts included, runs in the browser with no node behind it: an offline mode, a demo, or a game whose world lives on a chain in the tab. Because the real scripts run there, rather than a state dump made at build time, nothing goes stale when the contracts change. [Run deploy scripts in a browser](/documentation/browser/) shows how, and the [playground on the introduction page](/documentation/#try-it-here) is a working example.
+rocketh's core reads no file and needs no Node API, so the same deploy scripts run in a browser through `@rocketh/web`, with the records kept in memory or in IndexedDB. That makes two kinds of app possible. One deploys from the page through the user's wallet: a tool that deploys contracts for its users, or a dashboard. The other boots an EVM in the tab and deploys your real system on it, so the whole app, contracts included, runs in the browser with no node behind it: an offline mode, a demo, or a game whose world lives on a chain in the tab. Because the real scripts run there, rather than a state dump made at build time, nothing goes stale when the contracts change. [Run deploy scripts in a browser](/documentation/browser/) shows how, and the [playground on the introduction page](/documentation/#try-it-here) is a working example. Many code samples in the documentation also have an "Open in playground" link, which opens the sample as a full project on [play.rocketh.dev](https://play.rocketh.dev), where it compiles and deploys in the tab with nothing to install. Each of those samples is checked in CI against its example project, and every example is deployed against the published release after each release, so what you open is what the page shows.
 
 ### Accounts rocketh cannot sign for
 
@@ -125,15 +127,44 @@ The rest of a migration is the project around the scripts: Hardhat 3 and ESM, na
 
 The examples in the skill are not written from memory. They are copies of the [migration pairs](https://github.com/wighawag/rocketh/tree/main/packages/hardhat-deploy/test/migration-pairs), v1 scripts next to their v2 ports, from plain deploys to proxies, diamonds, named accounts and test fixtures. The v2 half of each pair is type-checked and executed in rocketh's test suite, and a test fails when a code block in the skill no longer matches its pair. The sample above is adapted from one of them.
 
+## Security of the tool itself
+
+A deployment tool sits next to keys and decides what gets sent to a live network, so its own security is part of the job. hardhat-deploy took part in the [GitHub Secure Open Source Fund](https://github.com/open-source/github-secure-open-source-fund), and its session was the occasion to go through the project with that question in mind: the code, the repository and the path from a commit to an npm release.
+
+### A policy and a threat model
+
+rocketh now has a [security policy](https://github.com/wighawag/rocketh/blob/main/SECURITY.md) that says what counts as a vulnerability here, what is out of scope, and how to report one privately, with or without a GitHub account. It describes the trust boundaries, what an advisory will contain, and has written runbooks for two cases: a vulnerability reported in the code, and a compromised publishing path. A [STRIDE threat model](https://github.com/wighawag/rocketh/blob/main/THREAT-MODEL.md) goes through each boundary and what protects it.
+
+### The code
+
+The review led to fixes where rocketh itself could leak a secret or send to the wrong place:
+
+- Errors about named accounts no longer print private keys. One used to dump the whole account definition, keys configured for other networks included, and GitHub only masks a secret printed on its own, so a key inside a larger message reached CI logs. Anything key-shaped is now redacted, and tests check that no message carries one.
+- A run refuses a node whose chain id disagrees with the environment it was given, outside of a fork (on a local development chain it warns instead). Before, rocketh adopted the node's chain id, so a wrong or hostile RPC endpoint could have every transaction signed for another chain, with keys often shared across networks.
+- Legacy transactions signed locally are replay-protected: they carry the chain id, so they cannot be replayed on another chain.
+- A real network declared from environment variables no longer falls back to the test mnemonic when its own keys are missing.
+
+### The repository and the release path
+
+The packages are published from CI through npm's trusted publishing, so every release carries a provenance attestation tying it to the commit and workflow that built it, and no long-lived npm token exists to leak. Every GitHub Action in every workflow is pinned to a commit SHA rather than a tag that could be moved. Workflows start with no permissions and each job is granted only what it needs, checkouts do not keep the token around, and workflow expressions are kept out of shell blocks, so a branch name or a title cannot inject a command.
+
+Dependencies are installed only once a release is a week old, and a dependency release published with weaker evidence than the one before it (for example without the provenance the previous version had) is refused, which blunts the usual npm supply-chain attack of a hijacked account publishing a new version. CodeQL and Dependabot run on the repository, and audit findings are cleared rather than left to pile up.
+
+For your own project, [Production hardening](/documentation/production-hardening/) collects the advice, starting with the deployer that owns nothing described above.
+
 ## Checked against real setups
 
 - Three public hardhat-deploy v1 projects had their deploy and governance scripts [ported as tests](https://github.com/wighawag/rocketh/tree/main/packages/rocketh-unknown-signer/test/ported-protocols), run against a rocketh environment over a mock node. [Metronome Synth](https://github.com/autonomoussoftware/metronome-synth-public): proxies behind a ProxyAdmin owned by a Safe, one implementation shared by many proxies, and Safe-only calls caught with `catchUnknownSigner` and proposed as a batch at the end of the run. [Vesper](https://github.com/vesperfi/vesper-contracts): a script that reads on chain who owns the ProxyAdmin, upgrades directly when the deployer does, and otherwise proposes both upgrades to the Safe as one MultiSend. [Odyssey](https://github.com/odyssey-finance/odyssey-contracts-public): contracts deployed through a create3 factory owned by the Safe, which only whitelisted callers may use, and strategy implementations registered by the Safe. Odyssey's OpenZeppelin 5 transparent proxies, which create their own ProxyAdmin, are not one of the proxy kinds `deployViaProxy` deploys; the test records that limit and the workaround that works today.
 - Aave V3's governance shape, where the `PoolAddressesProvider` owns its proxies directly and its own getter returns the same proxy address before and after an upgrade, is [tested](https://github.com/wighawag/rocketh/blob/main/packages/rocketh-read-execute/test/execute-guard-storage.integration.test.ts) with an [execute guard](/documentation/execute-guard/) that reads the proxy's implementation slot, so a re-run knows whether the upgrade has landed.
 - A Safe-owned upgrade was run for real on Sepolia: deploy with a Safe as the proxy owner, rehearse the upgrade on a fork, execute it through the Safe app, and re-run to see that nothing is sent. It is written up as [A Safe-owned project, end to end](/documentation/safe-owned-project/), and the project is a branch of template-ethereum-contracts.
 
+## What comes next
+
+The next piece of work is Foundry. A Foundry project will get what a hardhat-deploy project has today: rocketh reading forge's build output as it is and generating the same typed artifacts, so deploy scripts are type-checked the same way; deploy scripts run as the fixture of `forge test`, on an in-process chain with nothing to start; and deployments read from Solidity by name, with a typed accessor per contract, so a test writes `Counter counter = deployer.Counter();`. A reading path on this site, a demo project and the agent skills will follow for forge users. On the browser side, the playground will be able to interact with the contracts it deployed, not only deploy them.
+
 ## Thanks
 
-An Ethereum Foundation grant gave an important boost to the work of settling rocketh's stability. Thank you.
+An Ethereum Foundation grant gave an important boost to the work of settling rocketh's stability. The [GitHub Secure Open Source Fund](https://github.com/open-source/github-secure-open-source-fund) team's session shaped much of the security work above. Thank you to both.
 
 ## Where to start
 
