@@ -22,6 +22,7 @@ import {createRouteHandler, resolvePath, url} from './kit/paths';
 import {openFromNotification} from './kit/notification-navigation';
 import {manifest, loaders} from 'virtual:docs';
 import {createSearch} from './core/docs/search';
+import {pushHandoffs} from './push-handoffs';
 
 /**
  * The notifications service is generic: a notification is just a title/body/
@@ -32,6 +33,9 @@ export const notifications = createNotificationsService();
 export const serviceWorker = createServiceWorker(
 	{resolvePath, navigateTo: openFromNotification},
 	notifications,
+	// a push's hand-off the page read from its URL (`src/hooks.client.ts`),
+	// published as a click with the worker's (QA F23)
+	pushHandoffs.reads,
 );
 
 export const hashParams = getHashParamsFromLocation();
